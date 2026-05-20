@@ -1,4 +1,3 @@
-```markdown
 # MockStock
 
 MockStock은 실제 증권 플랫폼 구조를 참고하여 만드는 모의 주식 투자 플랫폼입니다.
