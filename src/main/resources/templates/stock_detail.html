@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockVault - Stock Detail</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
+    <link rel="stylesheet" th:href="@{/css/stock_detail.css}" href="/css/stock_detail.css">
+</head>
+<body>
+
+<header class="top-bar">
+    <a href="/main" class="brand-logo">
+        <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <polyline points="2,14 6,9 10,11 14,5 18,7" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+        <div class="brand-name">STOCK<span>VAULT</span></div>
+    </a>
+
+    <form class="search-area" id="stock-search-form">
+        <div class="search-box">
+            <span class="search-icon">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+            </span>
+            <input type="text" id="stock-search-input" placeholder="종목명 또는 심볼 검색" autocomplete="off">
+        </div>
+    </form>
+
+    <div class="user-actions">
+        <div class="profile-chip">
+            <div class="profile-avatar">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </div>
+            <span id="user-email">USER</span>
+        </div>
+
+        <button type="button" class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+    </div>
+</header>
+
+<main class="stock-detail-layout">
+    <section class="stock-summary">
+        <div class="stock-title-area">
+            <p class="panel-kicker">// STOCK DETAIL</p>
+            <h1 class="stock-title" th:text="${keyword}">삼성전자</h1>
+
+            <div class="stock-meta">
+                <div class="meta-item">
+                    <span class="meta-label">현재가</span>
+                    <strong class="meta-value">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">어제대비</span>
+                    <strong class="meta-value">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">등락률</span>
+                    <strong class="meta-value">-</strong>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">거래량</span>
+                    <strong class="meta-value">-</strong>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="favorite-btn" id="favorite-btn" aria-label="관심 종목 추가">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+        </button>
+    </section>
+
+    <nav class="stock-tabs">
+        <button type="button" class="active" data-tab="chart">차트</button>
+        <button type="button" data-tab="orderbook">호가</button>
+        <button type="button" data-tab="my-stock">내 주식</button>
+        <button type="button" data-tab="info">종목정보</button>
+    </nav>
+
+    <section class="tab-content">
+        <div class="tab-panel active" id="tab-chart">
+            <div class="chart-grid"></div>
+            <div class="tab-empty">
+                <p>차트 영역</p>
+                <span>추후 선택한 종목의 차트 데이터를 표시합니다.</span>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-orderbook">
+            <div class="tab-empty">
+                <p>호가 영역</p>
+                <span>추후 매수/매도 호가 정보를 표시합니다.</span>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-my-stock">
+            <div class="tab-empty">
+                <p>내 주식 영역</p>
+                <span>추후 보유 수량, 평균 단가, 평가 손익을 표시합니다.</span>
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-info">
+            <div class="tab-empty">
+                <p>종목정보 영역</p>
+                <span>추후 기업 개요, 시장 정보, 재무 정보를 표시합니다.</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/stock_detail.js}" src="/js/stock_detail.js"></script>
+</body>
+</html>

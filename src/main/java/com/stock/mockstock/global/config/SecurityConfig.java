@@ -41,7 +41,8 @@ public class SecurityConfig {
                                 "/api/users/login",
                                 "/login",
                                 "/signup",
-                                "/main"
+                                "/main",
+                                "/stocks/detail"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
