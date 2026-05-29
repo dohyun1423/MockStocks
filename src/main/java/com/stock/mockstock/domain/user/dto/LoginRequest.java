@@ -1,4 +1,4 @@
-// 로그인 요청
+// 로그인 요청 값을 받는 DTO
 package com.stock.mockstock.domain.user.dto;
 
 import jakarta.validation.constraints.NotBlank;

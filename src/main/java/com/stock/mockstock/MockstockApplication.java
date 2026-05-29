@@ -1,3 +1,4 @@
+// MockStock 스프링 부트 애플리케이션 시작점
 package com.stock.mockstock;
 
 import org.springframework.boot.SpringApplication;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @SpringBootApplication
 public class MockstockApplication {
 
+    // 애플리케이션 실행
     public static void main(String[] args) {
         SpringApplication.run(MockstockApplication.class, args);
     }

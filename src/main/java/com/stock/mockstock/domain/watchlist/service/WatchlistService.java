@@ -1,3 +1,4 @@
+// 관심종목 추가, 조회, 삭제 비즈니스 로직을 처리하는 서비스
 package com.stock.mockstock.domain.watchlist.service;
 
 import com.stock.mockstock.domain.user.entity.User;
@@ -20,6 +21,7 @@ public class WatchlistService {
     private final WatchlistRepository watchlistRepository;
     private final UserRepository userRepository;
 
+    // 로그인한 사용자의 관심종목 추가
     public void addWatchlist(String email, WatchlistCreateRequest request) {
         User user = getUser(email);
         String stockName = request.getStockName().trim();
@@ -36,6 +38,7 @@ public class WatchlistService {
         watchlistRepository.save(watchlist);
     }
 
+    // 로그인한 사용자의 관심종목 목록 조회
     @Transactional(readOnly = true)
     public List<WatchlistResponse> getMyWatchlists(String email) {
         User user = getUser(email);
@@ -46,6 +49,7 @@ public class WatchlistService {
                 .toList();
     }
 
+    // 로그인한 사용자의 관심종목 삭제
     public void removeWatchlist(String email, String stockName) {
         User user = getUser(email);
 

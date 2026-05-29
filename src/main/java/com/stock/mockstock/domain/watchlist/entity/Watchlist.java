@@ -1,3 +1,4 @@
+// 사용자별 관심종목을 저장하는 엔티티
 package com.stock.mockstock.domain.watchlist.entity;
 
 import com.stock.mockstock.domain.user.entity.User;

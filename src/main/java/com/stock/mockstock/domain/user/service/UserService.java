@@ -1,4 +1,4 @@
-// 유저가 사용하는 회원가입 서비스
+// 유저 회원가입과 로그인을 처리하는 서비스
 package com.stock.mockstock.domain.user.service;
 
 import com.stock.mockstock.domain.user.dto.LoginRequest;

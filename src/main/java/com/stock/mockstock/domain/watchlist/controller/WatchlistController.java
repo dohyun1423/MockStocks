@@ -1,3 +1,4 @@
+// 관심종목 API 요청을 받는 컨트롤러
 package com.stock.mockstock.domain.watchlist.controller;
 
 import com.stock.mockstock.domain.watchlist.dto.WatchlistCreateRequest;
@@ -17,6 +18,7 @@ public class WatchlistController {
 
     private final WatchlistService watchlistService;
 
+    // 관심종목 추가 요청 처리
     @PostMapping
     public void addWatchlist(
             Authentication authentication,
@@ -25,11 +27,13 @@ public class WatchlistController {
         watchlistService.addWatchlist(authentication.getName(), request);
     }
 
+    // 내 관심종목 목록 조회
     @GetMapping
     public List<WatchlistResponse> getMyWatchlists(Authentication authentication) {
         return watchlistService.getMyWatchlists(authentication.getName());
     }
 
+    // 관심종목 삭제 요청 처리
     @DeleteMapping
     public void removeWatchlist(
             Authentication authentication,

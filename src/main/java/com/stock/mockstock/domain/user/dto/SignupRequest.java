@@ -1,3 +1,4 @@
+// 회원가입 요청 값을 받는 DTO
 package com.stock.mockstock.domain.user.dto;
 
 import jakarta.validation.constraints.Email;

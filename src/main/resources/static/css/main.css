@@ -404,3 +404,19 @@ body {
         stroke-dashoffset: 0;
     }
 }
+
+.stock-info-card strong.up,
+.stock-info-section dd.up {
+    color: var(--accent);
+}
+
+.stock-info-card strong.down,
+.stock-info-section dd.down {
+    color: #ff4560;
+}
+
+.stock-info-message {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}

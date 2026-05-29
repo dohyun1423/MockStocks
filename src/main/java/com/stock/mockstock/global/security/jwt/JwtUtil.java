@@ -1,3 +1,4 @@
+// JWT 생성과 검증을 담당하는 유틸 클래스
 package com.stock.mockstock.global.security.jwt;
 
 import io.jsonwebtoken.Jwts;
@@ -20,6 +21,7 @@ public class JwtUtil {
 
     private Key key;
 
+    // secretKey로 JWT 서명에 사용할 Key 생성
     @PostConstruct
     public void init() {
         key = Keys.hmacShaKeyFor(secretKey.getBytes());
@@ -29,6 +31,7 @@ public class JwtUtil {
         return generateToken(email);
     }
 
+    // 이메일을 subject로 담아 JWT 생성
     public String generateToken(String email) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION_TIME);
@@ -41,6 +44,7 @@ public class JwtUtil {
                 .compact();
     }
 
+    // 토큰에서 사용자 이메일 추출
     public String getEmailFromToken(String token) {
 
         return Jwts.parserBuilder()
@@ -51,6 +55,7 @@ public class JwtUtil {
                 .getSubject();
     }
 
+    // 토큰 유효성 검증
     public boolean validateToken(String token) {
 
         try {
