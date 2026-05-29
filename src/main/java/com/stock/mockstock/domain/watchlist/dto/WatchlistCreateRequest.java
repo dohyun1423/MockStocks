@@ -1,3 +1,4 @@
+// 관심종목 추가 요청 값을 받는 DTO
 package com.stock.mockstock.domain.watchlist.dto;
 
 import jakarta.validation.constraints.NotBlank;

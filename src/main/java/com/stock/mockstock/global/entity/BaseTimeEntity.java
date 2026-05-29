@@ -1,4 +1,5 @@
-package com.stock.mockstock.global.entity; // 기본 엔티티 생성
+// 생성 시간과 수정 시간을 공통으로 관리하는 기본 엔티티
+package com.stock.mockstock.global.entity;
 
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;

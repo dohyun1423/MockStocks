@@ -1,3 +1,4 @@
+// 회원 계정 정보를 저장하는 엔티티
 package com.stock.mockstock.domain.user.entity;
 
 import com.stock.mockstock.domain.user.enumtype.Role;

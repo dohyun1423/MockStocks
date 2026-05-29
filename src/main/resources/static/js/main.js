@@ -60,11 +60,6 @@ function bindStockSearch() {
     });
 }
 
-function handleLogout() {
-    localStorage.removeItem('accessToken');
-    window.location.href = '/login';
-}
-
 async function loadWatchlists() {
     const accessToken = localStorage.getItem('accessToken');
 
@@ -90,33 +85,86 @@ async function loadWatchlists() {
         return;
     }
 
-    emptyState.outerHTML = `
-        <div class="watchlist-list">
-            ${watchlists.map((item) => `
-                <button type="button" class="watchlist-item" onclick="selectWatchlistStock('${escapeHtml(item.stockName)}')">
-                    <span>${escapeHtml(item.stockName)}</span>
-                </button>
-            `).join('')}
-        </div>
-    `;
+    const list = document.createElement('div');
+    list.className = 'watchlist-list';
+
+    watchlists.forEach((item) => {
+        const stockName = item.stockName || item.stock_name;
+
+        if (!stockName) {
+            return;
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'watchlist-item';
+        button.textContent = stockName;
+
+        button.addEventListener('click', () => {
+            selectWatchlistStock(stockName);
+        });
+
+        list.appendChild(button);
+    });
+
+    emptyState.replaceWith(list);
 }
 
-function goStockDetail(keyword) {
-    window.location.href = `/stocks/detail?keyword=${keyword}`;
+async function selectWatchlistStock(stockName) {
+    const stock = await fetchStockDetail(stockName);
+
+    if (!stock) {
+        renderMainChart(stockName);
+        renderStockSideInfo(stockName, null, null);
+        return;
+    }
+
+    const quote = await fetchStockQuote(stock.symbol);
+
+    renderMainChart(stock.name);
+    renderStockSideInfo(stock.name, stock, quote);
 }
 
-function escapeHtml(value) {
-    return value
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+async function fetchStockDetail(stockName) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        return null;
+    }
+
+    const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
 }
 
-function selectWatchlistStock(stockName) {
-    renderMainChart(stockName);
-    renderStockSideInfo(stockName);
+async function fetchStockQuote(symbol) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        return null;
+    }
+
+    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
 }
 
 function renderMainChart(stockName) {
@@ -174,12 +222,36 @@ function renderMainChart(stockName) {
     `;
 }
 
-function renderStockSideInfo(stockName) {
+function renderStockSideInfo(stockName, stock, quote) {
     const sidePanel = document.querySelector('.side-panel');
 
     if (!sidePanel) {
         return;
     }
+
+    if (!stock) {
+        sidePanel.innerHTML = `
+            <div class="panel-header">
+                <div>
+                    <p class="panel-kicker">// STOCK INFO</p>
+                    <h2>DETAILS</h2>
+                </div>
+            </div>
+
+            <div class="stock-info-card primary">
+                <span class="info-label">종목명</span>
+                <strong>${escapeHtml(stockName)}</strong>
+            </div>
+
+            <section class="stock-info-section">
+                <h3>정보 없음</h3>
+                <p class="stock-info-message">등록된 종목 정보를 찾을 수 없습니다.</p>
+            </section>
+        `;
+        return;
+    }
+
+    const price = quote || stock;
 
     sidePanel.innerHTML = `
         <div class="panel-header">
@@ -191,66 +263,80 @@ function renderStockSideInfo(stockName) {
 
         <div class="stock-info-card primary">
             <span class="info-label">종목명</span>
-            <strong>${escapeHtml(stockName)}</strong>
+            <strong>${escapeHtml(stock.name)}</strong>
         </div>
 
         <div class="stock-info-grid">
             <div class="stock-info-card">
                 <span class="info-label">현재가</span>
-                <strong>-</strong>
+                <strong>${formatNumber(price.currentPrice)}원</strong>
             </div>
             <div class="stock-info-card">
                 <span class="info-label">어제대비</span>
-                <strong>-</strong>
+                <strong class="${price.changePrice >= 0 ? 'up' : 'down'}">${formatSignedNumber(price.changePrice)}원</strong>
             </div>
             <div class="stock-info-card">
                 <span class="info-label">등락률</span>
-                <strong>-</strong>
+                <strong class="${price.changeRate >= 0 ? 'up' : 'down'}">${formatSignedNumber(price.changeRate)}%</strong>
             </div>
             <div class="stock-info-card">
                 <span class="info-label">거래량</span>
-                <strong>-</strong>
+                <strong>${formatNumber(price.volume)}</strong>
             </div>
         </div>
 
         <section class="stock-info-section">
             <h3>종목정보</h3>
             <dl>
-                <div>
-                    <dt>시장</dt>
-                    <dd>-</dd>
-                </div>
-                <div>
-                    <dt>업종</dt>
-                    <dd>-</dd>
-                </div>
-                <div>
-                    <dt>시가총액</dt>
-                    <dd>-</dd>
-                </div>
-                <div>
-                    <dt>상장주식수</dt>
-                    <dd>-</dd>
-                </div>
+                <div><dt>종목코드</dt><dd>${escapeHtml(stock.symbol)}</dd></div>
+                <div><dt>시장</dt><dd>${escapeHtml(stock.market)}</dd></div>
+                <div><dt>업종</dt><dd>${escapeHtml(stock.sector)}</dd></div>
+                <div><dt>시가총액</dt><dd>${formatNumber(stock.marketCap)}원</dd></div>
+                <div><dt>상장주식수</dt><dd>${formatNumber(stock.listedShares)}</dd></div>
             </dl>
         </section>
 
         <section class="stock-info-section">
-            <h3>투자 참고</h3>
+            <h3>실시간 참고</h3>
             <dl>
-                <div>
-                    <dt>PER</dt>
-                    <dd>-</dd>
-                </div>
-                <div>
-                    <dt>EPS</dt>
-                    <dd>-</dd>
-                </div>
-                <div>
-                    <dt>배당수익률</dt>
-                    <dd>-</dd>
-                </div>
+                <div><dt>시가</dt><dd>${formatNumber(quote?.openPrice)}원</dd></div>
+                <div><dt>고가</dt><dd>${formatNumber(quote?.highPrice)}원</dd></div>
+                <div><dt>저가</dt><dd>${formatNumber(quote?.lowPrice)}원</dd></div>
+                <div><dt>거래대금</dt><dd>${formatNumber(quote?.tradingValue)}원</dd></div>
             </dl>
         </section>
     `;
+}
+
+function handleLogout() {
+    localStorage.removeItem('accessToken');
+    window.location.href = '/login';
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function formatNumber(value) {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+
+    return Number(value).toLocaleString('ko-KR');
+}
+
+function formatSignedNumber(value) {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+
+    const number = Number(value);
+    const sign = number > 0 ? '+' : '';
+
+    return `${sign}${number.toLocaleString('ko-KR')}`;
 }

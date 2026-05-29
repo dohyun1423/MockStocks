@@ -1,3 +1,4 @@
+// 관심종목 DB 조회를 담당하는 Repository
 package com.stock.mockstock.domain.watchlist.repository;
 
 import com.stock.mockstock.domain.user.entity.User;

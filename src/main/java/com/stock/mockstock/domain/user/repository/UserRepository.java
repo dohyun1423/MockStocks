@@ -1,3 +1,4 @@
+// 회원 DB 조회를 담당하는 Repository
 package com.stock.mockstock.domain.user.repository;
 
 import com.stock.mockstock.domain.user.entity.User;

@@ -1,3 +1,4 @@
+// 관심종목 조회 결과를 내려주는 응답 DTO
 package com.stock.mockstock.domain.watchlist.dto;
 
 import com.stock.mockstock.domain.watchlist.entity.Watchlist;

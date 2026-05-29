@@ -1,3 +1,4 @@
+// 요청의 JWT 토큰을 검사해서 인증 정보를 설정하는 필터
 package com.stock.mockstock.global.security.jwt;
 
 import jakarta.servlet.FilterChain;
@@ -21,6 +22,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
     @Override
+    // Authorization 헤더의 Bearer 토큰을 검사
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
