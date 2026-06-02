@@ -26,124 +26,6 @@ body {
     overflow: hidden;
 }
 
-.top-bar {
-    height: 72px;
-    display: grid;
-    grid-template-columns: 260px minmax(280px, 1fr) 320px;
-    align-items: center;
-    gap: 24px;
-    padding: 0 28px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-}
-
-.brand-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: inherit;
-    text-decoration: none;
-}
-
-.brand-icon {
-    width: 38px;
-    height: 38px;
-    border: 1.5px solid var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.brand-name {
-    font-family: var(--font-display);
-    font-size: 28px;
-    letter-spacing: 4px;
-}
-
-.brand-name span {
-    color: var(--accent);
-}
-
-.search-area {
-    display: flex;
-    justify-content: center;
-}
-
-.search-box {
-    width: min(100%, 560px);
-    position: relative;
-}
-
-.search-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    color: var(--muted);
-    display: flex;
-    transform: translateY(-50%);
-}
-
-.search-box input {
-    width: 100%;
-    height: 42px;
-    padding: 0 16px 0 44px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 14px;
-    outline: none;
-}
-
-.search-box input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-dim);
-}
-
-.user-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.profile-chip {
-    height: 38px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 0 12px;
-    background: var(--card);
-    border: 1px solid var(--border);
-}
-
-.profile-avatar {
-    color: var(--accent);
-    display: flex;
-}
-
-.profile-chip span {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--muted);
-}
-
-.logout-btn {
-    height: 38px;
-    padding: 0 14px;
-    border: none;
-    background: var(--accent);
-    color: var(--bg);
-    font-family: var(--font-display);
-    font-size: 16px;
-    letter-spacing: 2px;
-    cursor: pointer;
-}
-
 .main-layout {
     height: calc(100vh - 72px);
     display: grid;
@@ -169,6 +51,23 @@ body {
 
 .side-panel {
     border-left: 1px solid var(--border);
+    overflow-y: auto;
+}
+
+.side-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.side-panel::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+.side-panel::-webkit-scrollbar-thumb {
+    background: var(--border);
+}
+
+.side-panel::-webkit-scrollbar-thumb:hover {
+    background: var(--muted);
 }
 
 .chart-panel {
@@ -420,3 +319,4 @@ body {
     font-size: 13px;
     line-height: 1.6;
 }
+

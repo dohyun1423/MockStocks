@@ -10,45 +10,11 @@
 
     <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
     <link rel="stylesheet" th:href="@{/css/main.css}" href="/css/main.css">
+    <link rel="stylesheet" th:href="@{/css/header.css}" href="/css/header.css">
 </head>
 <body>
 
-<header class="top-bar">
-    <a href="/main" class="brand-logo">
-        <div class="brand-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <polyline points="2,14 6,9 10,11 14,5 18,7" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        <div class="brand-name">STOCK<span>VAULT</span></div>
-    </a>
-
-    <form class="search-area" id="stock-search-form">
-        <div class="search-box">
-            <span class="search-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-            </span>
-            <input type="text" id="stock-search-input" placeholder="종목명 또는 심볼 검색" autocomplete="off">
-        </div>
-    </form>
-
-    <div class="user-actions">
-        <div class="profile-chip">
-            <div class="profile-avatar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
-            </div>
-            <span id="user-email">USER</span>
-        </div>
-
-        <button type="button" class="logout-btn" onclick="handleLogout()">LOGOUT</button>
-    </div>
-</header>
+<div th:replace="~{fragments/header :: header}"></div>
 
 <main class="main-layout">
     <aside class="watchlist-panel">
@@ -83,6 +49,7 @@
     </aside>
 </main>
 
+<script th:src="@{/js/header.js}" src="/js/header.js"></script>
 <script th:src="@{/js/main.js}" src="/js/main.js"></script>
 </body>
 </html>

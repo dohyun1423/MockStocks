@@ -1,64 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    checkLoginStatus();
-    bindStockSearch();
     loadWatchlists();
 });
-
-async function checkLoginStatus() {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        window.location.href = '/login';
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/users/me', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-
-        if (!response.ok) {
-            localStorage.removeItem('accessToken');
-            window.location.href = '/login';
-            return;
-        }
-
-        const email = await response.text();
-        const userEmail = document.getElementById('user-email');
-
-        if (userEmail) {
-            userEmail.textContent = email;
-        }
-    } catch (error) {
-        console.error(error);
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
-    }
-}
-
-function bindStockSearch() {
-    const form = document.getElementById('stock-search-form');
-    const input = document.getElementById('stock-search-input');
-
-    if (!form || !input) {
-        return;
-    }
-
-    form.addEventListener('submit', (event) => {
-        event.preventDefault();
-
-        const keyword = input.value.trim();
-
-        if (!keyword) {
-            return;
-        }
-
-        window.location.href = `/stocks/detail?keyword=${encodeURIComponent(keyword)}`;
-    });
-}
 
 async function loadWatchlists() {
     const accessToken = localStorage.getItem('accessToken');
@@ -110,18 +52,20 @@ async function loadWatchlists() {
     emptyState.replaceWith(list);
 }
 
+// 관심종목 클릭 시 종목 상세, 현재가, 가격 이력을 조회해서 화면 갱신
 async function selectWatchlistStock(stockName) {
     const stock = await fetchStockDetail(stockName);
 
     if (!stock) {
-        renderMainChart(stockName);
+        renderMainChart(stockName, [], null, '1M');
         renderStockSideInfo(stockName, null, null);
         return;
     }
 
     const quote = await fetchStockQuote(stock.symbol);
+    const priceHistories = await fetchStockPriceHistories(stock.symbol, '1D');
 
-    renderMainChart(stock.name);
+    renderMainChart(stock.name, priceHistories, stock.symbol, '1D');
     renderStockSideInfo(stock.name, stock, quote);
 }
 
@@ -167,12 +111,39 @@ async function fetchStockQuote(symbol) {
     return await response.json();
 }
 
-function renderMainChart(stockName) {
+// 종목코드와 기간으로 차트용 가격 이력 조회
+async function fetchStockPriceHistories(symbol, period) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        return [];
+    }
+
+    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    return await response.json();
+}
+
+// 가격 이력 데이터로 메인 차트 영역 갱신
+function renderMainChart(stockName, priceHistories = [], symbol = null, activePeriod = '1M') {
     const chartPanel = document.querySelector('.chart-panel');
 
     if (!chartPanel) {
         return;
     }
+
+    const points = createChartPoints(priceHistories);
+    const linePath = createLinePath(points);
+    const areaPath = createAreaPath(points);
 
     chartPanel.innerHTML = `
         <div class="panel-header chart-main-header">
@@ -182,44 +153,108 @@ function renderMainChart(stockName) {
             </div>
 
             <div class="chart-periods">
-                <button type="button" class="active">1D</button>
-                <button type="button">1W</button>
-                <button type="button">1M</button>
-                <button type="button">1Y</button>
+                <button type="button" data-period="1D" class="${activePeriod === '1D' ? 'active' : ''}">1D</button>
+                <button type="button" data-period="1W" class="${activePeriod === '1W' ? 'active' : ''}">1W</button>
+                <button type="button" data-period="1M" class="${activePeriod === '1M' ? 'active' : ''}">1M</button>
+                <button type="button" data-period="1Y" class="${activePeriod === '1Y' ? 'active' : ''}">1Y</button>
             </div>
         </div>
 
         <div class="main-chart-box">
             <div class="chart-grid"></div>
 
-            <svg class="mock-chart" viewBox="0 0 900 420" preserveAspectRatio="none">
-                <g stroke="rgba(0,229,160,0.06)" stroke-width="1">
-                    <line x1="0" y1="70" x2="900" y2="70"/>
-                    <line x1="0" y1="140" x2="900" y2="140"/>
-                    <line x1="0" y1="210" x2="900" y2="210"/>
-                    <line x1="0" y1="280" x2="900" y2="280"/>
-                    <line x1="0" y1="350" x2="900" y2="350"/>
-                    <line x1="150" y1="0" x2="150" y2="420"/>
-                    <line x1="300" y1="0" x2="300" y2="420"/>
-                    <line x1="450" y1="0" x2="450" y2="420"/>
-                    <line x1="600" y1="0" x2="600" y2="420"/>
-                    <line x1="750" y1="0" x2="750" y2="420"/>
-                </g>
+            ${
+        points.length > 0
+            ? `
+                        <svg class="mock-chart" viewBox="0 0 900 420" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="mainChartArea" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.18"/>
+                                    <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
+                                </linearGradient>
+                            </defs>
 
-                <defs>
-                    <linearGradient id="mainChartArea" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.18"/>
-                        <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
-                    </linearGradient>
-                </defs>
+                            <path d="${areaPath}" fill="url(#mainChartArea)"></path>
+                            <path class="chart-line" d="${linePath}"></path>
+                        </svg>
 
-                <path d="M0,320 C80,280 120,300 190,235 S330,130 430,180 S590,245 700,120 S820,90 900,70 L900,420 L0,420 Z" fill="url(#mainChartArea)"/>
-                <path class="chart-line" d="M0,320 C80,280 120,300 190,235 S330,130 430,180 S590,245 700,120 S820,90 900,70"/>
-            </svg>
-
-            <div class="chart-watermark">MOCK CHART</div>
+                        <div class="chart-watermark">PRICE HISTORY</div>
+                    `
+            : `
+                        <div class="chart-placeholder">
+                            <p>가격 이력이 없습니다.</p>
+                            <span>차트에 표시할 데이터를 찾을 수 없습니다.</span>
+                        </div>
+                    `
+    }
         </div>
     `;
+
+    bindChartPeriodButtons(stockName, symbol);
+}
+
+// 차트 기간 버튼 클릭 시 해당 기간의 가격 이력 다시 조회
+function bindChartPeriodButtons(stockName, symbol) {
+    const buttons = document.querySelectorAll('.chart-periods button');
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const period = button.dataset.period;
+
+            if (!symbol || !period) {
+                return;
+            }
+
+            const priceHistories = await fetchStockPriceHistories(symbol, period);
+            renderMainChart(stockName, priceHistories, symbol, period);
+        });
+    });
+}
+
+// 가격 이력을 SVG 좌표로 변환
+function createChartPoints(priceHistories) {
+    if (!priceHistories || priceHistories.length === 0) {
+        return [];
+    }
+
+    const width = 900;
+    const height = 420;
+    const padding = 36;
+    const prices = priceHistories.map((item) => Number(item.closePrice));
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+
+    return priceHistories.map((item, index) => {
+        const price = Number(item.closePrice);
+        const x = padding + index * ((width - padding * 2) / Math.max(priceHistories.length - 1, 1));
+        const y = height - padding - ((price - minPrice) / priceRange) * (height - padding * 2);
+
+        return { x, y };
+    });
+}
+
+// SVG 선 차트 path 생성
+function createLinePath(points) {
+    return points
+        .map((point, index) => {
+            const command = index === 0 ? 'M' : 'L';
+            return `${command}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+        })
+        .join(' ');
+}
+
+// SVG 영역 차트 path 생성
+function createAreaPath(points) {
+    if (points.length === 0) {
+        return '';
+    }
+
+    const linePath = createLinePath(points);
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+
+    return `${linePath} L${lastPoint.x.toFixed(1)},420 L${firstPoint.x.toFixed(1)},420 Z`;
 }
 
 function renderStockSideInfo(stockName, stock, quote) {
@@ -306,20 +341,6 @@ function renderStockSideInfo(stockName, stock, quote) {
             </dl>
         </section>
     `;
-}
-
-function handleLogout() {
-    localStorage.removeItem('accessToken');
-    window.location.href = '/login';
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
 }
 
 function formatNumber(value) {
