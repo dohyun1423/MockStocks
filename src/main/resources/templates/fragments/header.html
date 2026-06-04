@@ -25,14 +25,21 @@
     </form>
 
     <div class="user-actions">
-        <div class="profile-chip">
-            <div class="profile-avatar">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
+        <div class="profile-menu">
+            <button type="button" class="profile-chip" id="profile-menu-btn">
+                <div class="profile-avatar">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <span id="user-nickname">USER</span>
+            </button>
+
+            <div class="profile-dropdown" id="profile-dropdown">
+                <button type="button" onclick="showMyInfo()">내정보</button>
+                <button type="button" onclick="goPortfolio()">내 포트폴리오</button>
             </div>
-            <span id="user-email">USER</span>
         </div>
 
         <button type="button" class="logout-btn" onclick="handleLogout()">LOGOUT</button>

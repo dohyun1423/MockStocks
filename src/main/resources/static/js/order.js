@@ -152,13 +152,14 @@ async function submitOrder() {
     await loadOrderData();
     updateOrderTotalAmount();
 
+    if (typeof window.handleOrderSuccess === 'function') {
+        await window.handleOrderSuccess();
+    }
+
     setTimeout(() => {
         closeOrderModal();
     }, 400);
 
-    if (typeof loadWatchlists === 'function') {
-        // 현재 메인 페이지에서는 별도 갱신이 필요하면 나중에 이 위치에서 처리
-    }
 }
 
 // 매수 또는 매도 API 요청

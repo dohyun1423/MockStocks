@@ -7,6 +7,7 @@ import com.stock.mockstock.domain.user.entity.User;
 import com.stock.mockstock.domain.user.enumtype.Role;
 import com.stock.mockstock.domain.user.repository.UserRepository;
 import com.stock.mockstock.global.security.jwt.JwtUtil;
+import com.stock.mockstock.domain.user.dto.UserInfoResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -55,5 +56,13 @@ public class UserService {
 
         return jwtUtil.generateToken(user.getEmail());
     }
-    
+
+    // 현재 로그인한 사용자 정보 조회
+    @Transactional(readOnly = true)
+    public UserInfoResponse getMyInfo(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        return UserInfoResponse.from(user);
+    }
 }

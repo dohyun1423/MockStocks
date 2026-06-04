@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     checkLoginStatus();
     bindStockSearch();
+    bindProfileMenu();
 });
+
+let currentUserInfo = null;
 
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('accessToken');
@@ -25,11 +28,12 @@ async function checkLoginStatus() {
             return;
         }
 
-        const email = await response.text();
-        const userEmail = document.getElementById('user-email');
+        currentUserInfo = await response.json();
 
-        if (userEmail) {
-            userEmail.textContent = email;
+        const userNickname = document.getElementById('user-nickname');
+
+        if (userNickname) {
+            userNickname.textContent = currentUserInfo.nickname || currentUserInfo.email || 'USER';
         }
     } catch (error) {
         console.error(error);
@@ -163,4 +167,39 @@ function escapeHtml(value) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
+}
+
+// 프로필 버튼 클릭 시 메뉴 열기/닫기
+function bindProfileMenu() {
+    const profileButton = document.getElementById('profile-menu-btn');
+    const dropdown = document.getElementById('profile-dropdown');
+
+    if (!profileButton || !dropdown) {
+        return;
+    }
+
+    profileButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        dropdown.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!dropdown.contains(event.target) && !profileButton.contains(event.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+}
+
+// 내 포트폴리오 화면으로 이동
+function goPortfolio() {
+    window.location.href = '/portfolio';
+}
+
+// 임시 내정보 표시
+function showMyInfo() {
+    if (!currentUserInfo) {
+        return;
+    }
+
+    alert(`이메일: ${currentUserInfo.email}\n닉네임: ${currentUserInfo.nickname}`);
 }
