@@ -147,11 +147,49 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
 
     chartPanel.innerHTML = `
         <div class="panel-header chart-main-header">
-            <div>
-                <p class="panel-kicker">// SELECTED STOCK</p>
-                <h1>${escapeHtml(stockName)}</h1>
+            <div class="chart-title-row">
+                <div>
+                    <p class="panel-kicker">// SELECTED STOCK</p>
+                    <h1>${escapeHtml(stockName)}</h1>
+                </div>
+        
+                ${
+                symbol
+                    ? `
+                            <div class="chart-action-buttons">
+                                <button
+                                    type="button"
+                                    class="chart-trade-btn buy"
+                                    data-symbol="${escapeHtml(symbol)}"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                    data-order-type="BUY"
+                                >
+                                    매수
+                                </button>
+        
+                                <button
+                                    type="button"
+                                    class="chart-trade-btn sell"
+                                    data-symbol="${escapeHtml(symbol)}"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                    data-order-type="SELL"
+                                >
+                                    매도
+                                </button>
+        
+                                <button
+                                    type="button"
+                                    class="chart-watchlist-btn active"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                >
+                                    ♥
+                                </button>
+                            </div>
+                        `
+                    : ''
+            }
             </div>
-
+        
             <div class="chart-periods">
                 <button type="button" data-period="1D" class="${activePeriod === '1D' ? 'active' : ''}">1D</button>
                 <button type="button" data-period="1W" class="${activePeriod === '1W' ? 'active' : ''}">1W</button>
@@ -191,6 +229,66 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
     `;
 
     bindChartPeriodButtons(stockName, symbol);
+    bindChartActionButtons();
+}
+
+// 차트 상단의 매수, 매도, 관심 버튼을 연결
+function bindChartActionButtons() {
+    const tradeButtons = document.querySelectorAll('.chart-trade-btn');
+
+    tradeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const symbol = button.dataset.symbol;
+            const stockName = button.dataset.stockName;
+            const orderType = button.dataset.orderType;
+
+            if (!symbol || !stockName || !orderType) {
+                return;
+            }
+
+            openOrderModal(symbol, stockName, orderType);
+        });
+    });
+
+    const watchlistButton = document.querySelector('.chart-watchlist-btn');
+
+    if (watchlistButton) {
+        watchlistButton.addEventListener('click', async () => {
+            const stockName = watchlistButton.dataset.stockName;
+
+            if (!stockName) {
+                return;
+            }
+
+            const success = await addMainWatchlist(stockName);
+
+            if (success) {
+                watchlistButton.classList.add('active');
+            }
+        });
+    }
+}
+
+// 메인 차트에서 관심종목 추가
+async function addMainWatchlist(stockName) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        return false;
+    }
+
+    const response = await fetch('/api/watchlists', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+            stockName: stockName
+        })
+    });
+
+    return response.ok;
 }
 
 // 차트 기간 버튼 클릭 시 해당 기간의 가격 이력 다시 조회

@@ -106,3 +106,22 @@ async function handleLogin() {
         setLoading(btn, false);
     }
 }
+
+// 이메일 또는 비밀번호 입력 중 Enter를 누르면 로그인 실행
+document.addEventListener('DOMContentLoaded', () => {
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    [emailInput, passwordInput].forEach((input) => {
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleLogin();
+            }
+        });
+    });
+});

@@ -5,8 +5,32 @@ let currentStock = null;
 document.addEventListener('DOMContentLoaded', () => {
     bindStockTabs();
     bindFavoriteButton();
+    bindDetailOrderButtons();
     initStockDetail();
 });
+
+// 상세페이지 매수/매도 버튼을 주문 모달과 연결
+function bindDetailOrderButtons() {
+    const buyButton = document.getElementById('detail-buy-btn');
+    const sellButton = document.getElementById('detail-sell-btn');
+
+    buyButton?.addEventListener('click', () => {
+        openDetailOrderModal('BUY');
+    });
+
+    sellButton?.addEventListener('click', () => {
+        openDetailOrderModal('SELL');
+    });
+}
+
+// 현재 상세 종목 기준으로 주문 모달 열기
+function openDetailOrderModal(orderType) {
+    if (!currentStock || !currentStock.symbol) {
+        return;
+    }
+
+    openOrderModal(currentStock.symbol, currentStock.name, orderType);
+}
 
 // 상세 페이지 초기 데이터 조회
 async function initStockDetail() {

@@ -39,12 +39,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
                         .requestMatchers(
+                                "/",
                                 "/api/users/signup",
                                 "/api/users/login",
                                 "/login",
                                 "/signup",
                                 "/main",
-                                "/stocks/detail"
+                                "/stocks/detail",
+                                "/portfolio"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

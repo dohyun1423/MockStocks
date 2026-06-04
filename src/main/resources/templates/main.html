@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
     <link rel="stylesheet" th:href="@{/css/main.css}" href="/css/main.css">
     <link rel="stylesheet" th:href="@{/css/header.css}" href="/css/header.css">
+    <link rel="stylesheet" th:href="@{/css/order.css}" href="/css/order.css">
 </head>
 <body>
 
@@ -48,8 +49,10 @@
         </div>
     </aside>
 </main>
+<div th:replace="~{fragments/order_modal :: orderModal}"></div>
 
 <script th:src="@{/js/header.js}" src="/js/header.js"></script>
 <script th:src="@{/js/main.js}" src="/js/main.js"></script>
+<script th:src="@{/js/order.js}" src="/js/order.js"></script>
 </body>
 </html>

@@ -320,3 +320,55 @@ body {
     line-height: 1.6;
 }
 
+.chart-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.chart-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 22px;
+}
+
+.chart-trade-btn,
+.chart-watchlist-btn {
+    height: 38px;
+    border: 1px solid var(--border);
+    font-family: var(--font-body);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.chart-trade-btn {
+    width: 72px;
+    color: #000;
+}
+
+.chart-trade-btn.buy {
+    background: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.55);
+    color: #000;
+}
+
+.chart-trade-btn.sell {
+    background: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.55);
+    color: #000;
+}
+
+.chart-watchlist-btn {
+    width: 38px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.chart-watchlist-btn.active {
+    color: #ff4560;
+    border-color: rgba(255, 69, 96, 0.45);
+    background: rgba(255, 69, 96, 0.08);
+}

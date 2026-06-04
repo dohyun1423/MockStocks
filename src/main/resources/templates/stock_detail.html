@@ -11,6 +11,7 @@
     <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
     <link rel="stylesheet" th:href="@{/css/stock_detail.css}" href="/css/stock_detail.css">
     <link rel="stylesheet" th:href="@{/css/header.css}" href="/css/header.css">
+    <link rel="stylesheet" th:href="@{/css/order.css}" href="/css/order.css">
 </head>
 <body>
 
@@ -42,11 +43,21 @@
             </div>
         </div>
 
-        <button type="button" class="favorite-btn" id="favorite-btn" aria-label="관심 종목 추가">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-        </button>
+        <div class="stock-action-buttons">
+            <button type="button" class="detail-trade-btn buy" id="detail-buy-btn">
+                매수
+            </button>
+
+            <button type="button" class="detail-trade-btn sell" id="detail-sell-btn">
+                매도
+            </button>
+
+            <button type="button" class="favorite-btn" id="favorite-btn" aria-label="관심 종목 추가">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </button>
+        </div>
     </section>
 
     <nav class="stock-tabs">
@@ -88,7 +99,10 @@
     </section>
 </main>
 
+<div th:replace="~{fragments/order_modal :: orderModal}"></div>
+
 <script th:src="@{/js/header.js}" src="/js/header.js"></script>
 <script th:src="@{/js/stock_detail.js}" src="/js/stock_detail.js"></script>
+<script th:src="@{/js/order.js}" src="/js/order.js"></script>
 </body>
 </html>

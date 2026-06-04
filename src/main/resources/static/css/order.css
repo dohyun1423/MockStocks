@@ -1,0 +1,175 @@
+.order-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.68);
+}
+
+.order-modal-overlay.active {
+    display: flex;
+}
+
+.order-modal {
+    width: min(460px, 100%);
+    padding: 24px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+}
+
+.order-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.order-kicker {
+    margin-bottom: 6px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+}
+
+.order-modal-header h2 {
+    font-family: var(--font-display);
+    font-size: 34px;
+    letter-spacing: 3px;
+    line-height: 1;
+}
+
+.order-close-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.order-stock-summary,
+.order-info-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.order-stock-summary {
+    grid-template-columns: 1fr;
+}
+
+.order-info-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.order-stock-summary {
+    margin-bottom: 14px;
+}
+
+.order-stock-summary > div,
+.order-info-card {
+    padding: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+}
+
+.order-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.order-stock-summary strong,
+.order-info-card strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.order-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+}
+
+.order-tabs button {
+    height: 42px;
+    border: none;
+    background: var(--card);
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.order-tabs button + button {
+    border-left: 1px solid var(--border);
+}
+
+.order-tabs button.active.buy {
+    background: #ff6b6b;
+    color: #000;
+}
+
+.order-tabs button.active.sell {
+    background: #60a5fa;
+    color: #000;
+}
+
+.order-quantity-field {
+    display: block;
+    margin-top: 14px;
+}
+
+.order-quantity-field input {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    outline: none;
+}
+
+.order-message {
+    min-height: 20px;
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.order-message.error {
+    color: #ff4560;
+}
+
+.order-message.success {
+    color: var(--accent);
+}
+
+.order-submit-btn {
+    width: 100%;
+    height: 46px;
+    margin-top: 10px;
+    border: none;
+    background: #ff6b6b;
+    color: #000;
+    font-family: var(--font-body);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.order-submit-btn.sell {
+    background: #60a5fa;
+    color: #000;
+}
