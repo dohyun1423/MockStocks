@@ -1,32 +1,32 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<header class="top-bar" th:fragment="header">
-    <a href="/main" class="brand-logo">
-        <div class="brand-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <polyline points="2,14 6,9 10,11 14,5 18,7" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </div>
-        <div class="brand-name">STOCK<span>VAULT</span></div>
-    </a>
-
-    <form class="search-area" id="stock-search-form">
-        <div class="search-box">
-            <span class="search-icon">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+<div th:fragment="header">
+    <header class="top-bar">
+        <a href="/main" class="brand-logo">
+            <div class="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <polyline points="2,14 6,9 10,11 14,5 18,7" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-            </span>
-            <input type="text" id="stock-search-input" placeholder="종목명 또는 심볼 검색" autocomplete="off">
-            <div class="search-results" id="stock-search-results"></div>
-        </div>
-    </form>
+            </div>
+            <div class="brand-name">STOCK<span>VAULT</span></div>
+        </a>
 
-    <div class="user-actions">
-        <div class="profile-menu">
-            <button type="button" class="profile-chip" id="profile-menu-btn">
+        <form class="search-area" id="stock-search-form">
+            <div class="search-box">
+                <span class="search-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </span>
+                <input type="text" id="stock-search-input" placeholder="종목명 또는 심볼 검색" autocomplete="off">
+                <div class="search-results" id="stock-search-results"></div>
+            </div>
+        </form>
+
+        <div class="user-actions">
+            <button type="button" class="profile-chip" id="profile-menu-btn" aria-label="내정보 열기">
                 <div class="profile-avatar">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -36,14 +36,61 @@
                 <span id="user-nickname">USER</span>
             </button>
 
-            <div class="profile-dropdown" id="profile-dropdown">
-                <button type="button" onclick="showMyInfo()">내정보</button>
-                <button type="button" onclick="goPortfolio()">내 포트폴리오</button>
-            </div>
+            <button type="button" class="logout-btn" onclick="handleLogout()">LOGOUT</button>
         </div>
+    </header>
 
-        <button type="button" class="logout-btn" onclick="handleLogout()">LOGOUT</button>
+    <div class="my-info-modal-overlay" id="my-info-modal-overlay">
+        <section class="my-info-modal" role="dialog" aria-modal="true" aria-labelledby="my-info-title">
+            <header class="my-info-modal-header">
+                <div>
+                    <p class="my-info-kicker">// MY INFO</p>
+                    <h2 id="my-info-title">내정보</h2>
+                </div>
+
+                <button type="button" class="my-info-close-btn" onclick="closeMyInfoModal()" aria-label="내정보 닫기">
+                    ×
+                </button>
+            </header>
+
+            <div class="my-info-content">
+                <div class="my-info-row">
+                    <span>이메일</span>
+                    <strong id="my-info-email">-</strong>
+                </div>
+
+                <div class="my-info-row">
+                    <span>닉네임</span>
+                    <strong id="my-info-nickname">-</strong>
+                </div>
+            </div>
+
+            <section class="my-info-edit-section">
+                <h3>정보 수정</h3>
+
+                <div class="my-info-edit-grid">
+                    <label>
+                        <span>이메일 변경</span>
+                        <input type="email" placeholder="준비 중" disabled>
+                    </label>
+
+                    <label>
+                        <span>닉네임 변경</span>
+                        <input type="text" placeholder="준비 중" disabled>
+                    </label>
+
+                    <label>
+                        <span>비밀번호 변경</span>
+                        <input type="password" placeholder="준비 중" disabled>
+                    </label>
+                </div>
+
+                <p class="my-info-message">
+                    회원정보 수정 기능은 다음 단계에서 연결합니다.
+                </p>
+            </section>
+        </section>
     </div>
-</header>
+</div>
 </body>
 </html>

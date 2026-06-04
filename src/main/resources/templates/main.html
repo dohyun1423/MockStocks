@@ -10,6 +10,7 @@
 
     <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
     <link rel="stylesheet" th:href="@{/css/main.css}" href="/css/main.css">
+    <link rel="stylesheet" th:href="@{/css/portfolio.css}" href="/css/portfolio.css">
     <link rel="stylesheet" th:href="@{/css/header.css}" href="/css/header.css">
     <link rel="stylesheet" th:href="@{/css/order.css}" href="/css/order.css">
 </head>
@@ -17,42 +18,110 @@
 
 <div th:replace="~{fragments/header :: header}"></div>
 
-<main class="main-layout">
-    <aside class="watchlist-panel">
-        <div class="panel-header">
-            <p class="panel-kicker">// WATCHLIST</p>
-            <h2>MY STOCKS</h2>
-        </div>
+<nav class="dashboard-tabs" aria-label="main dashboard tabs">
+    <button type="button" class="active" data-dashboard-tab="watchlist">관심종목</button>
+    <button type="button" data-dashboard-tab="portfolio">내 주식</button>
+</nav>
 
-        <div class="empty-state">
-            <p>저장한 종목이 없습니다.</p>
-            <span>검색으로 관심 종목을 찾아볼 수 있습니다.</span>
-        </div>
-    </aside>
+<section class="dashboard-panel active" id="dashboard-watchlist">
+    <main class="main-layout">
+        <aside class="watchlist-panel">
+            <div class="panel-header">
+                <p class="panel-kicker">// WATCHLIST</p>
+                <h2>MY STOCKS</h2>
+            </div>
 
-    <section class="chart-panel">
-        <div class="panel-header">
-            <p class="panel-kicker">// MARKET</p>
-            <h1>CHART</h1>
-        </div>
+            <div class="empty-state">
+                <p>저장한 종목이 없습니다.</p>
+                <span>검색으로 관심 종목을 찾아볼 수 있습니다.</span>
+            </div>
+        </aside>
 
-        <div class="chart-placeholder">
-            <p>종목을 검색해 주세요.</p>
-            <span>검색 후 종목 상세 화면으로 이동합니다.</span>
-        </div>
-    </section>
+        <section class="chart-panel">
+            <div class="panel-header">
+                <p class="panel-kicker">// MARKET</p>
+                <h1>CHART</h1>
+            </div>
 
-    <aside class="side-panel">
-        <div class="panel-header">
-            <p class="panel-kicker">// PANEL</p>
-            <h2>DETAILS</h2>
-        </div>
-    </aside>
-</main>
+            <div class="chart-placeholder">
+                <p>종목을 검색해 주세요.</p>
+                <span>검색 후 종목 상세 화면으로 이동합니다.</span>
+            </div>
+        </section>
+
+        <aside class="side-panel">
+            <div class="panel-header">
+                <p class="panel-kicker">// PANEL</p>
+                <h2>DETAILS</h2>
+            </div>
+        </aside>
+    </main>
+</section>
+
+<section class="dashboard-panel" id="dashboard-portfolio">
+    <main class="portfolio-layout embedded-portfolio">
+        <section class="portfolio-summary-grid">
+            <div class="summary-card">
+                <span>보유 현금</span>
+                <strong id="cash-balance">-</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>총 자산</span>
+                <strong id="total-asset">-</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>총 평가금액</span>
+                <strong id="total-evaluation">-</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>총 손익</span>
+                <strong id="total-profit-loss">-</strong>
+            </div>
+
+            <div class="summary-card">
+                <span>총 수익률</span>
+                <strong id="total-profit-rate">-</strong>
+            </div>
+        </section>
+
+        <section class="holding-section">
+            <div class="section-header">
+                <p class="panel-kicker">// HOLDINGS</p>
+                <h2>MY STOCKS</h2>
+            </div>
+
+            <div class="holding-table-wrap" id="holding-table-wrap">
+                <div class="portfolio-empty">
+                    <p>보유 종목이 없습니다.</p>
+                    <span>관심 종목이나 상세 화면에서 매수를 진행해보세요.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="trade-section">
+            <div class="section-header">
+                <p class="panel-kicker">// TRADE HISTORY</p>
+                <h2>TRADES</h2>
+            </div>
+
+            <div class="trade-table-wrap" id="trade-table-wrap">
+                <div class="portfolio-empty">
+                    <p>거래내역이 없습니다.</p>
+                    <span>매수 또는 매도를 진행하면 거래내역이 표시됩니다.</span>
+                </div>
+            </div>
+        </section>
+    </main>
+</section>
+
 <div th:replace="~{fragments/order_modal :: orderModal}"></div>
 
 <script th:src="@{/js/header.js}" src="/js/header.js"></script>
 <script th:src="@{/js/main.js}" src="/js/main.js"></script>
 <script th:src="@{/js/order.js}" src="/js/order.js"></script>
+<script th:src="@{/js/portfolio.js}" src="/js/portfolio.js"></script>
 </body>
 </html>

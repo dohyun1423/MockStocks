@@ -1,5 +1,3 @@
-// 여러 화면에서 재사용하는 매수/매도 주문 모달 스크립트
-
 let orderState = {
     symbol: '',
     stockName: '',
@@ -159,7 +157,6 @@ async function submitOrder() {
     setTimeout(() => {
         closeOrderModal();
     }, 400);
-
 }
 
 // 매수 또는 매도 API 요청

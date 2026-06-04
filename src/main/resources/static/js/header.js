@@ -1,10 +1,10 @@
+let currentUserInfo = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     checkLoginStatus();
     bindStockSearch();
-    bindProfileMenu();
+    bindMyInfoModal();
 });
-
-let currentUserInfo = null;
 
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('accessToken');
@@ -160,46 +160,57 @@ function handleLogout() {
     window.location.href = '/login';
 }
 
+function bindMyInfoModal() {
+    const profileButton = document.getElementById('profile-menu-btn');
+    const myInfoOverlay = document.getElementById('my-info-modal-overlay');
+
+    if (profileButton) {
+        profileButton.addEventListener('click', showMyInfo);
+    }
+
+    if (myInfoOverlay) {
+        myInfoOverlay.addEventListener('click', (event) => {
+            if (event.target === myInfoOverlay) {
+                closeMyInfoModal();
+            }
+        });
+    }
+}
+
+function showMyInfo() {
+    const overlay = document.getElementById('my-info-modal-overlay');
+
+    if (!overlay || !currentUserInfo) {
+        return;
+    }
+
+    setHeaderText('my-info-email', currentUserInfo.email || '-');
+    setHeaderText('my-info-nickname', currentUserInfo.nickname || '-');
+
+    overlay.classList.add('active');
+}
+
+function closeMyInfoModal() {
+    const overlay = document.getElementById('my-info-modal-overlay');
+
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
+}
+
+function setHeaderText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+}
+
 function escapeHtml(value) {
-    return String(value)
+    return String(value || '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
-}
-
-// 프로필 버튼 클릭 시 메뉴 열기/닫기
-function bindProfileMenu() {
-    const profileButton = document.getElementById('profile-menu-btn');
-    const dropdown = document.getElementById('profile-dropdown');
-
-    if (!profileButton || !dropdown) {
-        return;
-    }
-
-    profileButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        dropdown.classList.toggle('active');
-    });
-
-    document.addEventListener('click', (event) => {
-        if (!dropdown.contains(event.target) && !profileButton.contains(event.target)) {
-            dropdown.classList.remove('active');
-        }
-    });
-}
-
-// 내 포트폴리오 화면으로 이동
-function goPortfolio() {
-    window.location.href = '/portfolio';
-}
-
-// 임시 내정보 표시
-function showMyInfo() {
-    if (!currentUserInfo) {
-        return;
-    }
-
-    alert(`이메일: ${currentUserInfo.email}\n닉네임: ${currentUserInfo.nickname}`);
 }

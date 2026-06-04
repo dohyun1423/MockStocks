@@ -23,9 +23,14 @@ body {
 
 .portfolio-layout {
     height: calc(100vh - 72px);
-    padding: 28px;
+    padding: 28px 28px 96px;
     overflow-y: auto;
+    box-sizing: border-box;
     background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 229, 160, 0.04), transparent 60%), var(--bg);
+}
+
+.embedded-portfolio {
+    height: 100%;
 }
 
 .portfolio-layout::-webkit-scrollbar {
@@ -221,4 +226,70 @@ body {
     .portfolio-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
+
+.trade-section {
+    margin-top: 28px;
+    padding-top: 22px;
+    padding-bottom: 48px;
+    border-top: 1px solid var(--border);
+}
+
+.trade-table-wrap {
+    border: 1px solid var(--border);
+    background: rgba(15, 25, 35, 0.45);
+    overflow-x: auto;
+}
+
+.trade-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 820px;
+}
+
+.trade-table th,
+.trade-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.trade-table th {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: 400;
+}
+
+.trade-table td {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.trade-table th:first-child,
+.trade-table td:first-child {
+    text-align: left;
+}
+
+.trade-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 26px;
+    color: #000;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.trade-type.buy {
+    background: #ff6b6b;
+}
+
+.trade-type.sell {
+    background: var(--blue);
 }
