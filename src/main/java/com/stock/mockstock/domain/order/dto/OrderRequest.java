@@ -1,7 +1,8 @@
-// 매수와 매도 요청 DTO
+// 매수와 매도 주문 요청 값을 담는 DTO
 package com.stock.mockstock.domain.order.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 
@@ -11,6 +12,7 @@ public class OrderRequest {
     @NotBlank(message = "종목코드는 필수입니다.")
     private String symbol;
 
+    @NotNull(message = "수량은 필수입니다.")
     @Positive(message = "수량은 1주 이상이어야 합니다.")
     private Integer quantity;
 }

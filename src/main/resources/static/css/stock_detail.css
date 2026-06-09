@@ -29,8 +29,9 @@ body {
 
 .stock-detail-layout {
     height: calc(100vh - 72px);
-    padding: 28px;
+    padding: 28px 28px 72px;
     background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,229,160,0.04), transparent 60%), var(--bg);
+    overflow: hidden;
 }
 
 .panel-kicker {
@@ -133,7 +134,7 @@ body {
 }
 
 .tab-content {
-    height: calc(100% - 180px);
+    height: calc(100% - 180px - 44px);
     margin-top: 24px;
     border: 1px solid var(--border);
     background: rgba(15,25,35,0.45);
@@ -144,8 +145,9 @@ body {
 .tab-panel {
     height: 100%;
     display: none;
-    padding: 24px;
+    padding: 24px 24px 56px;
     position: relative;
+    overflow-y: auto;
 }
 
 .tab-panel.active {
@@ -218,4 +220,230 @@ body {
     background: #60a5fa;
     border-color: rgba(96, 165, 250, 0.55);
     color: #000;
+}
+
+.detail-info-grid {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.detail-info-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.detail-info-grid::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+.detail-info-grid::-webkit-scrollbar-thumb {
+    background: var(--border);
+}
+
+.detail-info-section {
+    margin-bottom: 24px;
+}
+
+.detail-info-section h3 {
+    margin-bottom: 14px;
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--text);
+}
+
+.detail-info-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.detail-info-card {
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+}
+
+.detail-info-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.detail-info-card strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+}
+
+.detail-info-card strong.up,
+.detail-info-list dd.up {
+    color: var(--accent);
+}
+
+.detail-info-card strong.down,
+.detail-info-list dd.down {
+    color: var(--red);
+}
+
+.detail-info-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 18px;
+}
+
+.detail-info-list div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: rgba(15, 25, 35, 0.45);
+}
+
+.detail-info-list dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.detail-info-list dd {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    text-align: right;
+}
+
+.detail-my-stock-wrap {
+    height: 100%;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.detail-my-section {
+    margin-bottom: 28px;
+}
+
+.detail-my-section h3 {
+    margin-bottom: 14px;
+    font-family: var(--font-display);
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--text);
+}
+
+.detail-my-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.detail-my-card {
+    padding: 14px;
+    border: 1px solid var(--border);
+    background: var(--card);
+}
+
+.detail-my-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.detail-my-card strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+}
+
+.detail-my-card strong.up {
+    color: var(--accent);
+}
+
+.detail-my-card strong.down {
+    color: var(--red);
+}
+
+.detail-trade-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    background: rgba(15, 25, 35, 0.45);
+}
+
+.detail-trade-table th,
+.detail-trade-table td {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13px;
+    text-align: left;
+}
+
+.detail-trade-table th {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.detail-trade-table td {
+    font-family: var(--font-mono);
+}
+
+.detail-trade-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    height: 28px;
+    color: #000;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.detail-trade-type.buy {
+    background: #ff6b6b;
+}
+
+.detail-trade-type.sell {
+    background: #60a5fa;
+}
+
+.detail-my-empty {
+    min-height: 160px;
+    border: 1px dashed var(--border);
+    background: rgba(15, 25, 35, 0.35);
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.detail-my-empty p {
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.detail-my-empty span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+    .detail-info-cards,
+    .detail-info-list,
+    .detail-my-cards {
+        grid-template-columns: 1fr;
+    }
 }

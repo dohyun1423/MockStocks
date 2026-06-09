@@ -31,11 +31,15 @@ public class OrderService {
 
     // 현재가 기준 즉시 매수 처리
     public OrderResponse buy(String email, OrderRequest request) {
+        validateOrderRequest(request);
+
         User user = getUser(email);
         Stock stock = getStockBySymbol(request.getSymbol());
+        int quantity = request.getQuantity();
         Long price = getCurrentPrice(stock);
-        Long totalAmount = price * request.getQuantity();
+        Long totalAmount = calculateTotalAmount(price, quantity);
 
+        validateBuyAmount(user, totalAmount);
         user.decreaseCash(totalAmount);
 
         Holding holding = holdingRepository.findByUserAndStock(user, stock)
@@ -46,15 +50,15 @@ public class OrderService {
                         .averagePrice(0L)
                         .build());
 
-        holding.buy(request.getQuantity(), price);
+        holding.buy(quantity, price);
         holdingRepository.save(holding);
 
-        saveTrade(user, stock, OrderType.BUY, request.getQuantity(), price, totalAmount);
+        saveTrade(user, stock, OrderType.BUY, quantity, price, totalAmount);
 
         return new OrderResponse(
                 stock.getName(),
                 OrderType.BUY,
-                request.getQuantity(),
+                quantity,
                 price,
                 totalAmount,
                 user.getCash()
@@ -63,32 +67,70 @@ public class OrderService {
 
     // 현재가 기준 즉시 매도 처리
     public OrderResponse sell(String email, OrderRequest request) {
+        validateOrderRequest(request);
+
         User user = getUser(email);
         Stock stock = getStockBySymbol(request.getSymbol());
+        int quantity = request.getQuantity();
         Long price = getCurrentPrice(stock);
-        Long totalAmount = price * request.getQuantity();
+        Long totalAmount = calculateTotalAmount(price, quantity);
 
         Holding holding = holdingRepository.findByUserAndStock(user, stock)
                 .orElseThrow(() -> new IllegalArgumentException("보유 중인 종목이 아닙니다."));
 
-        holding.sell(request.getQuantity());
+        validateSellQuantity(holding, quantity);
+        holding.sell(quantity);
 
         if (holding.isEmpty()) {
             holdingRepository.delete(holding);
         }
 
         user.increaseCash(totalAmount);
-
-        saveTrade(user, stock, OrderType.SELL, request.getQuantity(), price, totalAmount);
+        saveTrade(user, stock, OrderType.SELL, quantity, price, totalAmount);
 
         return new OrderResponse(
                 stock.getName(),
                 OrderType.SELL,
-                request.getQuantity(),
+                quantity,
                 price,
                 totalAmount,
                 user.getCash()
         );
+    }
+
+    // 주문 요청의 필수값과 수량을 서비스 계층에서 한 번 더 검증
+    private void validateOrderRequest(OrderRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("주문 요청이 비어 있습니다.");
+        }
+
+        if (request.getSymbol() == null || request.getSymbol().isBlank()) {
+            throw new IllegalArgumentException("종목코드는 필수입니다.");
+        }
+
+        if (request.getQuantity() == null || request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("수량은 1주 이상이어야 합니다.");
+        }
+    }
+
+    private void validateBuyAmount(User user, Long totalAmount) {
+        if (user.getCash() < totalAmount) {
+            throw new IllegalArgumentException("보유 현금이 부족합니다.");
+        }
+    }
+
+    private void validateSellQuantity(Holding holding, Integer quantity) {
+        if (holding.getQuantity() < quantity) {
+            throw new IllegalArgumentException("보유 수량이 부족합니다.");
+        }
+    }
+
+    private Long calculateTotalAmount(Long price, Integer quantity) {
+        try {
+            return Math.multiplyExact(price, quantity.longValue());
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("주문 금액이 너무 큽니다.");
+        }
     }
 
     private void saveTrade(
@@ -116,16 +158,22 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
     }
 
-    // 종목코드로 주문 대상 종목 조회
+    // 종목코드를 정규화해서 주문 대상 종목을 조회
     private Stock getStockBySymbol(String symbol) {
-        return stockRepository.findBySymbol(symbol)
+        String normalizedSymbol = normalizeSymbol(symbol);
+
+        return stockRepository.findBySymbol(normalizedSymbol)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 종목입니다."));
+    }
+
+    private String normalizeSymbol(String symbol) {
+        return symbol.trim().replaceAll("\\s+", "").toUpperCase();
     }
 
     private Long getCurrentPrice(Stock stock) {
         StockQuoteResponse quote = stockQuoteService.getQuote(stock.getSymbol());
 
-        if (quote.getCurrentPrice() == null || quote.getCurrentPrice() <= 0) {
+        if (quote == null || quote.getCurrentPrice() == null || quote.getCurrentPrice() <= 0) {
             throw new IllegalArgumentException("현재가 정보를 가져올 수 없습니다.");
         }
 

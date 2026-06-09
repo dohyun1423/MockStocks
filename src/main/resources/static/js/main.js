@@ -6,23 +6,41 @@ document.addEventListener('DOMContentLoaded', () => {
 // 메인 화면의 관심종목/내 주식 탭 전환
 function bindDashboardTabs() {
     const tabButtons = document.querySelectorAll('.dashboard-tabs button');
-    const panels = document.querySelectorAll('.dashboard-panel');
 
     tabButtons.forEach((button) => {
         button.addEventListener('click', async () => {
             const target = button.dataset.dashboardTab;
 
-            tabButtons.forEach((item) => item.classList.remove('active'));
-            panels.forEach((panel) => panel.classList.remove('active'));
-
-            button.classList.add('active');
-            document.getElementById(`dashboard-${target}`)?.classList.add('active');
+            switchDashboardTab(target);
 
             if (target === 'portfolio' && typeof loadPortfolioDashboard === 'function') {
                 await loadPortfolioDashboard();
             }
         });
     });
+}
+
+// 메인 대시보드 탭을 공통으로 전환
+function switchDashboardTab(target) {
+    const tabButtons = document.querySelectorAll('.dashboard-tabs button');
+    const panels = document.querySelectorAll('.dashboard-panel');
+
+    tabButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.dashboardTab === target);
+    });
+
+    panels.forEach((panel) => {
+        panel.classList.toggle('active', panel.id === `dashboard-${target}`);
+    });
+}
+
+// 내 주식 탭에서 보유 종목을 선택하면 해당 종목 상세페이지로 이동
+function openStockFromPortfolio(symbol) {
+    if (!symbol) {
+        return;
+    }
+
+    location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
 }
 
 async function loadWatchlists() {
@@ -121,6 +139,28 @@ async function fetchStockDetail(stockName) {
     }
 
     const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
+}
+
+// 종목코드로 종목 상세 정보 조회
+async function fetchStockDetailBySymbol(symbol) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        return null;
+    }
+
+    const response = await fetch(`/api/stocks/symbol/${encodeURIComponent(symbol)}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${accessToken}`

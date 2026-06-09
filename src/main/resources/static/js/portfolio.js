@@ -1,10 +1,12 @@
+// 내 주식 탭에서 포트폴리오와 거래내역을 조회하고 화면에 표시하는 스크립트
+
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('holding-table-wrap')) {
         loadPortfolioDashboard();
     }
 });
 
-// 내 주식 탭에서 포트폴리오와 거래내역을 함께 갱신
+// 내 주식 탭의 포트폴리오와 거래내역을 함께 갱신
 async function loadPortfolioDashboard() {
     await loadPortfolio();
     await loadTrades();
@@ -27,6 +29,7 @@ async function loadPortfolio() {
     });
 
     if (!response.ok) {
+        renderPortfolioSummary(null);
         renderEmptyPortfolio();
         return;
     }
@@ -37,7 +40,7 @@ async function loadPortfolio() {
     renderHoldings(portfolio.holdings || []);
 }
 
-// 내 거래내역 조회
+// 내 전체 거래내역 조회
 async function loadTrades() {
     const accessToken = localStorage.getItem('accessToken');
 
@@ -62,29 +65,25 @@ async function loadTrades() {
     renderTrades(trades || []);
 }
 
-// 포트폴리오 요약 정보 렌더링
+// 백엔드에서 계산한 포트폴리오 요약 정보를 화면에 표시
 function renderPortfolioSummary(portfolio) {
-    const holdings = portfolio.holdings || [];
-    const cashBalance = Number(portfolio.cashBalance || 0);
-    const totalEvaluation = holdings.reduce((sum, item) => sum + Number(item.evaluationAmount || 0), 0);
-    const totalPurchase = holdings.reduce((sum, item) => {
-        return sum + Number(item.averagePrice || 0) * Number(item.quantity || 0);
-    }, 0);
-    const totalProfitLoss = holdings.reduce((sum, item) => sum + Number(item.profitLoss || 0), 0);
-    const totalAsset = cashBalance + totalEvaluation;
-    const totalProfitRate = totalPurchase === 0 ? 0 : totalProfitLoss / totalPurchase * 100;
+    const cashBalance = Number(portfolio?.cashBalance || 0);
+    const totalAsset = Number(portfolio?.totalAsset || cashBalance);
+    const totalEvaluation = Number(portfolio?.totalEvaluation || 0);
+    const totalProfitLoss = Number(portfolio?.totalProfitLoss || 0);
+    const totalProfitRate = Number(portfolio?.totalProfitRate || 0);
 
     setPortfolioText('cash-balance', `${portfolioFormatNumber(cashBalance)}원`);
     setPortfolioText('total-asset', `${portfolioFormatNumber(totalAsset)}원`);
     setPortfolioText('total-evaluation', `${portfolioFormatNumber(totalEvaluation)}원`);
     setPortfolioText('total-profit-loss', `${portfolioFormatSignedNumber(totalProfitLoss)}원`);
-    setPortfolioText('total-profit-rate', `${portfolioFormatSignedNumber(totalProfitRate.toFixed(2))}%`);
+    setPortfolioText('total-profit-rate', `${portfolioFormatSignedNumber(totalProfitRate)}%`);
 
     setProfitClass('total-profit-loss', totalProfitLoss);
     setProfitClass('total-profit-rate', totalProfitRate);
 }
 
-// 보유 종목 목록 렌더링
+// 보유 종목 목록 표시
 function renderHoldings(holdings) {
     const wrap = document.getElementById('holding-table-wrap');
 
@@ -113,7 +112,11 @@ function renderHoldings(holdings) {
             </thead>
             <tbody>
             ${holdings.map((holding) => `
-                <tr>
+                <tr
+                    class="holding-row"
+                    data-symbol="${portfolioEscapeHtml(holding.symbol)}"
+                    data-stock-name="${portfolioEscapeHtml(holding.stockName)}"
+                >
                     <td>
                         <div class="holding-name">
                             <strong>${portfolioEscapeHtml(holding.stockName)}</strong>
@@ -159,9 +162,10 @@ function renderHoldings(holdings) {
     `;
 
     bindPortfolioOrderButtons();
+    bindHoldingRows();
 }
 
-// 거래내역 목록 렌더링
+// 거래내역 목록 표시
 function renderTrades(trades) {
     const wrap = document.getElementById('trade-table-wrap');
 
@@ -222,7 +226,7 @@ function renderEmptyPortfolio() {
     wrap.innerHTML = `
         <div class="portfolio-empty">
             <p>보유 종목이 없습니다.</p>
-            <span>관심 종목이나 상세 화면에서 매수를 진행해보세요.</span>
+            <span>관심종목이나 상세 화면에서 매수를 진행해보세요.</span>
         </div>
     `;
 }
@@ -262,7 +266,34 @@ function bindPortfolioOrderButtons() {
     });
 }
 
-// 주문 성공 후 현재 화면의 포트폴리오 정보 갱신
+// 보유 종목 행 클릭 시 종목 상세화면으로 이동
+function bindHoldingRows() {
+    const rows = document.querySelectorAll('.holding-row');
+
+    rows.forEach((row) => {
+        row.addEventListener('click', (event) => {
+            if (event.target.closest('button')) {
+                return;
+            }
+
+            const symbol = row.dataset.symbol;
+            const stockName = row.dataset.stockName;
+
+            if (!symbol) {
+                return;
+            }
+
+            if (typeof openStockFromPortfolio === 'function') {
+                openStockFromPortfolio(symbol, stockName);
+                return;
+            }
+
+            window.location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
+        });
+    });
+}
+
+// 주문 성공 시 현재 화면의 포트폴리오 정보 갱신
 window.handleOrderSuccess = async function () {
     await loadPortfolioDashboard();
 };

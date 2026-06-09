@@ -293,3 +293,11 @@ body {
 .trade-type.sell {
     background: var(--blue);
 }
+
+.holding-row {
+    cursor: pointer;
+}
+
+.holding-row:hover {
+    background: rgba(0, 229, 160, 0.04);
+}

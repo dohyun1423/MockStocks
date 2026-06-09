@@ -1,4 +1,4 @@
-// 사용자의 현금과 보유 주식 평가 정보를 조회하는 서비스
+// 사용자의 현금, 보유 주식, 평가금액, 수익률 정보를 계산하는 서비스
 package com.stock.mockstock.domain.portfolio.service;
 
 import com.stock.mockstock.domain.portfolio.dto.HoldingResponse;
@@ -26,7 +26,7 @@ public class PortfolioService {
     private final HoldingRepository holdingRepository;
     private final StockQuoteService stockQuoteService;
 
-    // 내 현금과 보유 주식 목록 조회
+    // 내 현금, 보유 종목, 전체 평가금액과 전체 수익률 조회
     public PortfolioResponse getMyPortfolio(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
@@ -36,13 +36,26 @@ public class PortfolioService {
                 .map(this::toHoldingResponse)
                 .toList();
 
-        return new PortfolioResponse(user.getCash(), holdings);
+        Long totalEvaluation = calculateTotalEvaluation(holdings);
+        Long totalPurchaseAmount = calculateTotalPurchaseAmount(holdings);
+        Long totalProfitLoss = calculateTotalProfitLoss(holdings);
+        Long totalAsset = user.getCash() + totalEvaluation;
+        BigDecimal totalProfitRate = calculateProfitRate(totalProfitLoss, totalPurchaseAmount);
+
+        return new PortfolioResponse(
+                user.getCash(),
+                totalAsset,
+                totalEvaluation,
+                totalPurchaseAmount,
+                totalProfitLoss,
+                totalProfitRate,
+                holdings
+        );
     }
 
+    // 보유 종목 하나의 평가금액, 손익, 수익률 계산
     private HoldingResponse toHoldingResponse(Holding holding) {
-        StockQuoteResponse quote = stockQuoteService.getQuote(holding.getStock().getSymbol());
-
-        Long currentPrice = quote.getCurrentPrice();
+        Long currentPrice = getCurrentPrice(holding);
         Long evaluationAmount = currentPrice * holding.getQuantity();
         Long purchaseAmount = holding.getAveragePrice() * holding.getQuantity();
         Long profitLoss = evaluationAmount - purchaseAmount;
@@ -60,8 +73,46 @@ public class PortfolioService {
         );
     }
 
+    private Long getCurrentPrice(Holding holding) {
+        StockQuoteResponse quote = stockQuoteService.getQuote(holding.getStock().getSymbol());
+
+        if (quote != null && quote.getCurrentPrice() != null && quote.getCurrentPrice() > 0) {
+            return quote.getCurrentPrice();
+        }
+
+        Long fallbackPrice = holding.getStock().getCurrentPrice();
+
+        if (fallbackPrice == null || fallbackPrice < 0) {
+            return 0L;
+        }
+
+        return fallbackPrice;
+    }
+
+    private Long calculateTotalEvaluation(List<HoldingResponse> holdings) {
+        return holdings.stream()
+                .mapToLong((holding) -> holding.getEvaluationAmount() == null ? 0L : holding.getEvaluationAmount())
+                .sum();
+    }
+
+    private Long calculateTotalPurchaseAmount(List<HoldingResponse> holdings) {
+        return holdings.stream()
+                .mapToLong((holding) -> {
+                    long averagePrice = holding.getAveragePrice() == null ? 0L : holding.getAveragePrice();
+                    long quantity = holding.getQuantity() == null ? 0L : holding.getQuantity();
+                    return averagePrice * quantity;
+                })
+                .sum();
+    }
+
+    private Long calculateTotalProfitLoss(List<HoldingResponse> holdings) {
+        return holdings.stream()
+                .mapToLong((holding) -> holding.getProfitLoss() == null ? 0L : holding.getProfitLoss())
+                .sum();
+    }
+
     private BigDecimal calculateProfitRate(Long profitLoss, Long purchaseAmount) {
-        if (purchaseAmount == 0) {
+        if (purchaseAmount == null || purchaseAmount == 0) {
             return BigDecimal.ZERO;
         }
 

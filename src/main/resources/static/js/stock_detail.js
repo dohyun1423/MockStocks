@@ -1,4 +1,4 @@
-// 주식 상세 화면의 탭, 관심종목, 현재가 정보를 처리하는 스크립트
+// 주식 상세 화면에서 관심종목, 현재가, 내 주식 정보를 처리하는 스크립트
 
 let currentStock = null;
 
@@ -32,7 +32,7 @@ function openDetailOrderModal(orderType) {
     openOrderModal(currentStock.symbol, currentStock.name, orderType);
 }
 
-// 상세 페이지 초기 데이터 조회
+// 상세페이지 초기 데이터 조회
 async function initStockDetail() {
     const keyword = getTitleStockName();
 
@@ -44,6 +44,7 @@ async function initStockDetail() {
 
     if (!currentStock) {
         await loadFavoriteStatus([keyword]);
+        renderDetailMyStockError('종목 정보를 찾지 못했습니다.');
         return;
     }
 
@@ -55,7 +56,320 @@ async function initStockDetail() {
         renderStockQuote(quote);
     }
 
-    await loadFavoriteStatus([currentStock.name, keyword]);
+    renderDetailStockInfo(currentStock, quote);
+    await renderDetailMyStock(currentStock.symbol);
+    await loadFavoriteStatus([currentStock.name, currentStock.symbol, keyword]);
+}
+
+// 상세페이지 내 주식 탭에 현재 종목의 보유 정보와 거래내역 표시
+async function renderDetailMyStock(symbol) {
+    const wrap = document.getElementById('detail-my-stock-wrap');
+
+    if (!wrap || !symbol) {
+        return;
+    }
+
+    const [portfolio, trades] = await Promise.all([
+        fetchMyPortfolio(),
+        fetchMyTrades(symbol)
+    ]);
+
+    if (!portfolio) {
+        renderDetailMyStockError('내 주식 정보를 불러오지 못했습니다.');
+        return;
+    }
+
+    const holding = (portfolio.holdings || []).find((item) => {
+        return normalizeStockSymbol(item.symbol) === normalizeStockSymbol(symbol);
+    });
+
+    wrap.innerHTML = `
+        ${renderDetailHoldingSection(holding)}
+        ${renderDetailTradeSection(trades || [])}
+    `;
+}
+
+// 내 포트폴리오 조회
+async function fetchMyPortfolio() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        window.location.href = '/login';
+        return null;
+    }
+
+    const response = await fetch('/api/portfolio', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
+}
+
+// 현재 종목의 거래내역 조회
+async function fetchMyTrades(symbol) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        window.location.href = '/login';
+        return [];
+    }
+
+    const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
+    const response = await fetch(`/api/trades${query}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    return await response.json();
+}
+
+// 현재 종목의 보유 정보를 카드 형태로 렌더링
+function renderDetailHoldingSection(holding) {
+    if (!holding) {
+        return `
+            <section class="detail-my-section">
+                <h3>보유 정보</h3>
+
+                <div class="detail-my-empty">
+                    <p>현재 보유 중인 수량이 없습니다.</p>
+                    <span>매수를 진행하면 이 영역에 보유 정보가 표시됩니다.</span>
+                </div>
+            </section>
+        `;
+    }
+
+    return `
+        <section class="detail-my-section">
+            <h3>보유 정보</h3>
+
+            <div class="detail-my-cards">
+                <div class="detail-my-card">
+                    <span>보유수량</span>
+                    <strong>${formatNumber(holding.quantity)}주</strong>
+                </div>
+
+                <div class="detail-my-card">
+                    <span>평균단가</span>
+                    <strong>${formatNumber(holding.averagePrice)}원</strong>
+                </div>
+
+                <div class="detail-my-card">
+                    <span>현재가</span>
+                    <strong>${formatNumber(holding.currentPrice)}원</strong>
+                </div>
+
+                <div class="detail-my-card">
+                    <span>평가금액</span>
+                    <strong>${formatNumber(holding.evaluationAmount)}원</strong>
+                </div>
+
+                <div class="detail-my-card">
+                    <span>손익</span>
+                    <strong class="${Number(holding.profitLoss) >= 0 ? 'up' : 'down'}">
+                        ${formatSignedNumber(holding.profitLoss)}원
+                    </strong>
+                </div>
+
+                <div class="detail-my-card">
+                    <span>수익률</span>
+                    <strong class="${Number(holding.profitRate) >= 0 ? 'up' : 'down'}">
+                        ${formatSignedNumber(holding.profitRate)}%
+                    </strong>
+                </div>
+            </div>
+        </section>
+    `;
+}
+
+// 현재 종목의 거래내역을 표로 렌더링
+function renderDetailTradeSection(trades) {
+    if (!trades || trades.length === 0) {
+        return `
+            <section class="detail-my-section">
+                <h3>거래내역</h3>
+
+                <div class="detail-my-empty">
+                    <p>거래내역이 없습니다.</p>
+                    <span>이 종목을 매수하거나 매도하면 거래내역이 표시됩니다.</span>
+                </div>
+            </section>
+        `;
+    }
+
+    return `
+        <section class="detail-my-section">
+            <h3>거래내역</h3>
+
+            <table class="detail-trade-table">
+                <thead>
+                <tr>
+                    <th>구분</th>
+                    <th>수량</th>
+                    <th>체결가</th>
+                    <th>거래금액</th>
+                    <th>거래시간</th>
+                </tr>
+                </thead>
+                <tbody>
+                ${trades.map((trade) => `
+                    <tr>
+                        <td>
+                            <span class="detail-trade-type ${trade.orderType === 'BUY' ? 'buy' : 'sell'}">
+                                ${trade.orderType === 'BUY' ? '매수' : '매도'}
+                            </span>
+                        </td>
+                        <td>${formatNumber(trade.quantity)}주</td>
+                        <td>${formatNumber(trade.price)}원</td>
+                        <td>${formatNumber(trade.totalAmount)}원</td>
+                        <td>${formatTradeDate(trade.tradedAt)}</td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table>
+        </section>
+    `;
+}
+
+// 내 주식 조회 실패 시 표시
+function renderDetailMyStockError(message = '내 주식 정보를 불러오지 못했습니다.') {
+    const wrap = document.getElementById('detail-my-stock-wrap');
+
+    if (!wrap) {
+        return;
+    }
+
+    wrap.innerHTML = `
+        <div class="detail-my-empty">
+            <p>${escapeHtml(message)}</p>
+            <span>잠시 후 다시 시도해 주세요.</span>
+        </div>
+    `;
+}
+
+// 종목정보 탭에 현재 종목의 상세 정보 표시
+function renderDetailStockInfo(stock, quote) {
+    const infoGrid = document.getElementById('detail-info-grid');
+
+    if (!infoGrid || !stock) {
+        return;
+    }
+
+    const price = quote || stock;
+
+    infoGrid.innerHTML = `
+        <section class="detail-info-section">
+            <h3>가격 정보</h3>
+
+            <div class="detail-info-cards">
+                <div class="detail-info-card">
+                    <span>현재가</span>
+                    <strong>${formatNumber(price.currentPrice)}원</strong>
+                </div>
+
+                <div class="detail-info-card">
+                    <span>어제대비</span>
+                    <strong class="${Number(price.changePrice) >= 0 ? 'up' : 'down'}">
+                        ${formatSignedNumber(price.changePrice)}원
+                    </strong>
+                </div>
+
+                <div class="detail-info-card">
+                    <span>등락률</span>
+                    <strong class="${Number(price.changeRate) >= 0 ? 'up' : 'down'}">
+                        ${formatSignedNumber(price.changeRate)}%
+                    </strong>
+                </div>
+
+                <div class="detail-info-card">
+                    <span>거래량</span>
+                    <strong>${formatNumber(price.volume)}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="detail-info-section">
+            <h3>종목정보</h3>
+
+            <dl class="detail-info-list">
+                <div>
+                    <dt>종목명</dt>
+                    <dd>${escapeHtml(stock.name)}</dd>
+                </div>
+                <div>
+                    <dt>종목코드</dt>
+                    <dd>${escapeHtml(stock.symbol)}</dd>
+                </div>
+                <div>
+                    <dt>시장</dt>
+                    <dd>${escapeHtml(stock.market)}</dd>
+                </div>
+                <div>
+                    <dt>업종</dt>
+                    <dd>${escapeHtml(stock.sector)}</dd>
+                </div>
+                <div>
+                    <dt>시가총액</dt>
+                    <dd>${formatNumber(stock.marketCap)}원</dd>
+                </div>
+                <div>
+                    <dt>상장주식수</dt>
+                    <dd>${formatNumber(stock.listedShares)}</dd>
+                </div>
+                <div>
+                    <dt>PER</dt>
+                    <dd>${formatNumber(stock.per)}</dd>
+                </div>
+                <div>
+                    <dt>EPS</dt>
+                    <dd>${formatNumber(stock.eps)}원</dd>
+                </div>
+                <div>
+                    <dt>배당수익률</dt>
+                    <dd>${formatNumber(stock.dividendYield)}%</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="detail-info-section">
+            <h3>실시간 참고</h3>
+
+            <dl class="detail-info-list">
+                <div>
+                    <dt>시가</dt>
+                    <dd>${formatNumber(quote?.openPrice)}원</dd>
+                </div>
+                <div>
+                    <dt>고가</dt>
+                    <dd>${formatNumber(quote?.highPrice)}원</dd>
+                </div>
+                <div>
+                    <dt>저가</dt>
+                    <dd>${formatNumber(quote?.lowPrice)}원</dd>
+                </div>
+                <div>
+                    <dt>기준가</dt>
+                    <dd>${formatNumber(quote?.basePrice)}원</dd>
+                </div>
+                <div>
+                    <dt>거래대금</dt>
+                    <dd>${formatNumber(quote?.tradingValue)}원</dd>
+                </div>
+            </dl>
+        </section>
+    `;
 }
 
 // 상세 화면 탭 전환 처리
@@ -192,15 +506,15 @@ async function removeWatchlist(stockName) {
     return response.ok;
 }
 
-// 종목명으로 DB 상세 정보 조회
-async function fetchStockDetail(stockName) {
+// 종목명 또는 종목코드로 DB 상세 정보 조회
+async function fetchStockDetail(keyword) {
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`, {
+    const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(keyword)}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -214,7 +528,7 @@ async function fetchStockDetail(stockName) {
     return await response.json();
 }
 
-// 종목코드로 더미 quote 현재가 조회
+// 종목코드로 현재가 조회
 async function fetchStockQuote(symbol) {
     const accessToken = localStorage.getItem('accessToken');
 
@@ -276,7 +590,6 @@ function setStockTitle(stockName) {
     }
 }
 
-// 특정 요소의 텍스트 변경
 function setText(id, value) {
     const element = document.getElementById(id);
 
@@ -305,14 +618,29 @@ function setPriceColor(id, value) {
     }
 }
 
-// 관심종목 비교를 위해 공백을 제거하고 영어는 대문자로 변환
+// 관심종목 비교를 위해 공백 제거 후 대문자로 통일
 function normalizeStockName(value) {
     return String(value || '')
         .replace(/\s+/g, '')
         .toUpperCase();
 }
 
-// 숫자를 한국어 콤마 포맷으로 변환
+// 종목코드 비교를 위해 공백 제거 후 대문자로 통일
+function normalizeStockSymbol(value) {
+    return String(value || '')
+        .replace(/\s+/g, '')
+        .toUpperCase();
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
 function formatNumber(value) {
     if (value === null || value === undefined || value === '') {
         return '-';
@@ -321,7 +649,6 @@ function formatNumber(value) {
     return Number(value).toLocaleString('ko-KR');
 }
 
-// 양수에는 +를 붙여서 표시
 function formatSignedNumber(value) {
     if (value === null || value === undefined || value === '') {
         return '-';
@@ -332,3 +659,27 @@ function formatSignedNumber(value) {
 
     return `${sign}${number.toLocaleString('ko-KR')}`;
 }
+
+function formatTradeDate(value) {
+    if (!value) {
+        return '-';
+    }
+
+    return String(value).replace('T', ' ').slice(0, 16);
+}
+
+// 상세페이지에서 주문 성공 시 현재 종목의 가격, 종목정보, 보유 정보, 거래내역을 다시 조회
+window.handleOrderSuccess = async function () {
+    if (!currentStock || !currentStock.symbol) {
+        return;
+    }
+
+    const quote = await fetchStockQuote(currentStock.symbol);
+
+    if (quote) {
+        renderStockQuote(quote);
+        renderDetailStockInfo(currentStock, quote);
+    }
+
+    await renderDetailMyStock(currentStock.symbol);
+};

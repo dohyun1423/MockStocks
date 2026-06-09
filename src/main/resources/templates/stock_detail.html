@@ -29,7 +29,7 @@
                     <strong class="meta-value" id="detail-current-price">-</strong>
                 </div>
                 <div class="meta-item">
-                    <span class="meta-label">어제 대비</span>
+                    <span class="meta-label">어제대비</span>
                     <strong class="meta-value" id="detail-change-price">-</strong>
                 </div>
                 <div class="meta-item">
@@ -44,15 +44,10 @@
         </div>
 
         <div class="stock-action-buttons">
-            <button type="button" class="detail-trade-btn buy" id="detail-buy-btn">
-                매수
-            </button>
+            <button type="button" class="detail-trade-btn buy" id="detail-buy-btn">매수</button>
+            <button type="button" class="detail-trade-btn sell" id="detail-sell-btn">매도</button>
 
-            <button type="button" class="detail-trade-btn sell" id="detail-sell-btn">
-                매도
-            </button>
-
-            <button type="button" class="favorite-btn" id="favorite-btn" aria-label="관심 종목 추가">
+            <button type="button" class="favorite-btn" id="favorite-btn" aria-label="관심종목 추가">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.08C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                 </svg>
@@ -84,16 +79,20 @@
         </div>
 
         <div class="tab-panel" id="tab-my-stock">
-            <div class="tab-empty">
-                <p>내 주식 영역</p>
-                <span>추후 보유 수량, 평균 단가, 평가 손익을 표시합니다.</span>
+            <div class="detail-my-stock-wrap" id="detail-my-stock-wrap">
+                <div class="tab-empty">
+                    <p>내 주식 정보를 불러오는 중입니다.</p>
+                    <span>현재 종목의 보유 정보와 거래내역을 조회합니다.</span>
+                </div>
             </div>
         </div>
 
         <div class="tab-panel" id="tab-info">
-            <div class="tab-empty">
-                <p>종목정보 영역</p>
-                <span>추후 기업 개요, 시장 정보, 재무 정보를 표시합니다.</span>
+            <div class="detail-info-grid" id="detail-info-grid">
+                <div class="tab-empty">
+                    <p>종목 정보를 불러오는 중입니다.</p>
+                    <span>현재가와 기본 종목 정보를 조회합니다.</span>
+                </div>
             </div>
         </div>
     </section>
