@@ -131,7 +131,7 @@ function renderSearchResults(stocks) {
     }
 
     results.innerHTML = stocks.map((stock) => `
-        <button type="button" class="search-result-item" onclick="goStockDetail('${escapeHtml(stock.name)}')">
+        <button type="button" class="search-result-item" onclick="goStockDetail('${escapeHtml(stock.symbol)}')">
             <span class="search-result-name">${escapeHtml(stock.name)}</span>
             <span class="search-result-meta">${escapeHtml(stock.symbol)} · ${escapeHtml(stock.market)}</span>
         </button>
@@ -151,8 +151,8 @@ function clearSearchResults() {
     results.classList.remove('active');
 }
 
-function goStockDetail(stockName) {
-    window.location.href = `/stocks/detail?keyword=${encodeURIComponent(stockName)}`;
+function goStockDetail(symbol) {
+    window.location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
 }
 
 function handleLogout() {

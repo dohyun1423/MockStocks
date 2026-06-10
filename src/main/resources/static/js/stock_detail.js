@@ -514,7 +514,14 @@ async function fetchStockDetail(keyword) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(keyword)}`, {
+    const normalizedKeyword = String(keyword || '').trim();
+    const isSymbol = /^[0-9A-Z]+$/.test(normalizedKeyword);
+
+    const url = isSymbol
+        ? `/api/stocks/symbol/${encodeURIComponent(normalizedKeyword)}`
+        : `/api/stocks/detail?name=${encodeURIComponent(normalizedKeyword)}`;
+
+    const response = await fetch(url, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -527,7 +534,6 @@ async function fetchStockDetail(keyword) {
 
     return await response.json();
 }
-
 // 종목코드로 현재가 조회
 async function fetchStockQuote(symbol) {
     const accessToken = localStorage.getItem('accessToken');

@@ -4,7 +4,10 @@ package com.stock.mockstock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import com.stock.mockstock.global.config.KisProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
+@EnableConfigurationProperties(KisProperties.class)
 @EnableJpaAuditing
 @SpringBootApplication
 public class MockstockApplication {
