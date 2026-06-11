@@ -1,5 +1,14 @@
 // 내 주식 탭에서 포트폴리오와 거래내역을 조회하고 화면에 표시하는 스크립트
 
+const portfolioState = {
+    portfolio: null,
+    trades: null,
+    loading: false,
+    loaded: false,
+    requestId: 0,
+    inFlight: null
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const isMainDashboard = document.querySelector('.dashboard-tabs');
 
@@ -9,24 +18,73 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 내 주식 탭의 포트폴리오와 거래내역을 함께 갱신
-async function loadPortfolioDashboard() {
-    await loadPortfolio();
-    await loadTrades();
+async function loadPortfolioDashboard(force = false) {
+    if (portfolioState.loaded && !force) {
+        renderPortfolioSummary(portfolioState.portfolio);
+        renderHoldings(portfolioState.portfolio?.holdings || []);
+        renderTrades(portfolioState.trades || []);
+        return;
+    }
+
+    if (portfolioState.inFlight && !force) {
+        return await portfolioState.inFlight;
+    }
+
+    const requestId = ++portfolioState.requestId;
+    portfolioState.loading = true;
+
+    portfolioState.inFlight = (async () => {
+        const [portfolio, trades] = await Promise.all([
+            loadPortfolioData(),
+            loadTradesData()
+        ]);
+
+        if (requestId !== portfolioState.requestId) {
+            return;
+        }
+
+        if (portfolio) {
+            portfolioState.portfolio = portfolio;
+            portfolioState.loaded = true;
+
+            renderPortfolioSummary(portfolio);
+            renderHoldings(portfolio.holdings || []);
+        } else if (!portfolioState.portfolio) {
+            renderPortfolioSummary(null);
+            renderEmptyPortfolio();
+        }
+
+        if (trades) {
+            portfolioState.trades = trades;
+            renderTrades(trades || []);
+        } else if (!portfolioState.trades) {
+            renderEmptyTrades();
+        }
+    })();
+
+    try {
+        await portfolioState.inFlight;
+    } finally {
+        if (requestId === portfolioState.requestId) {
+            portfolioState.loading = false;
+            portfolioState.inFlight = null;
+        }
+    }
 }
 
 // 내 포트폴리오 조회
-async function loadPortfolio() {
+async function loadPortfolioData() {
     const authenticated = await waitAuthReady();
 
     if (!authenticated) {
-        return;
+        return null;
     }
 
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
-        return;
+        redirectToLogin();
+        return null;
     }
 
     const response = await fetch('/api/portfolio', {
@@ -36,25 +94,31 @@ async function loadPortfolio() {
         }
     });
 
-    if (!response.ok) {
-        renderPortfolioSummary(null);
-        renderEmptyPortfolio();
-        return;
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return null;
     }
 
-    const portfolio = await response.json();
+    if (!response.ok) {
+        return null;
+    }
 
-    renderPortfolioSummary(portfolio);
-    renderHoldings(portfolio.holdings || []);
+    return await response.json();
 }
 
 // 내 전체 거래내역 조회
-async function loadTrades() {
+async function loadTradesData() {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return null;
+    }
+
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
-        return;
+        redirectToLogin();
+        return null;
     }
 
     const response = await fetch('/api/trades', {
@@ -64,13 +128,16 @@ async function loadTrades() {
         }
     });
 
-    if (!response.ok) {
-        renderEmptyTrades();
-        return;
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return null;
     }
 
-    const trades = await response.json();
-    renderTrades(trades || []);
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
 }
 
 // 백엔드에서 계산한 포트폴리오 요약 정보를 화면에 표시
@@ -303,7 +370,9 @@ function bindHoldingRows() {
 
 // 주문 성공 시 현재 화면의 포트폴리오 정보 갱신
 window.handleOrderSuccess = async function () {
-    await loadPortfolioDashboard();
+    portfolioState.loaded = false;
+    portfolioState.inFlight = null;
+    await loadPortfolioDashboard(true);
 };
 
 function formatTradeDate(value) {

@@ -1,18 +1,19 @@
 let currentUserInfo = null;
 
-window.authReady = null;
+window.authReady = initializeAuth();
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.authReady = checkLoginStatus();
+document.addEventListener('DOMContentLoaded', async () => {
+    await window.authReady;
+
     bindStockSearch();
     bindMyInfoModal();
 });
 
-async function checkLoginStatus() {
+async function initializeAuth() {
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
+        redirectToLogin();
         return false;
     }
 
@@ -24,10 +25,14 @@ async function checkLoginStatus() {
             }
         });
 
-        if (!response.ok) {
-            localStorage.removeItem('accessToken');
-            window.location.href = '/login';
+        if (response.status === 401) {
+            redirectToLogin();
             return false;
+        }
+
+        if (!response.ok) {
+            console.warn('사용자 정보 조회 실패:', response.status);
+            return true;
         }
 
         currentUserInfo = await response.json();
@@ -40,19 +45,26 @@ async function checkLoginStatus() {
 
         return true;
     } catch (error) {
-        console.error(error);
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
-        return false;
+        console.error('사용자 정보 조회 중 네트워크 오류:', error);
+        return true;
     }
 }
 
 async function waitAuthReady() {
     if (!window.authReady) {
-        return true;
+        window.authReady = initializeAuth();
     }
 
     return await window.authReady;
+}
+
+function redirectToLogin() {
+    localStorage.removeItem('accessToken');
+    window.location.replace('/login');
+}
+
+function isAuthError(response) {
+    return response.status === 401;
 }
 
 function bindStockSearch() {

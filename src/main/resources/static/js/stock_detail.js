@@ -1,20 +1,23 @@
 // 주식 상세 화면에서 관심종목, 현재가, 내 주식 정보를 처리하는 스크립트
 
 let currentStock = null;
+let stockDetailReady = null;
+let detailMyStockLoaded = false;
+let detailMyStockLoading = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    if (window.authReady) {
-        const authenticated = await window.authReady;
+    const authenticated = await waitAuthReady();
 
-        if (!authenticated) {
-            return;
-        }
+    if (!authenticated) {
+        return;
     }
 
     bindStockTabs();
     bindFavoriteButton();
     bindDetailOrderButtons();
-    await initStockDetail();
+
+    stockDetailReady = initStockDetail();
+    await stockDetailReady;
 });
 
 // 상세페이지 매수/매도 버튼을 주문 모달과 연결
@@ -64,7 +67,6 @@ async function initStockDetail() {
     }
 
     renderDetailStockInfo(currentStock, quote);
-    await renderDetailMyStock(currentStock.symbol);
     await loadFavoriteStatus(currentStock);
 }
 
@@ -73,7 +75,7 @@ async function renderDetailMyStock(symbol) {
     const wrap = document.getElementById('detail-my-stock-wrap');
 
     if (!wrap || !symbol) {
-        return;
+        return false;
     }
 
     const [portfolio, trades] = await Promise.all([
@@ -83,7 +85,7 @@ async function renderDetailMyStock(symbol) {
 
     if (!portfolio) {
         renderDetailMyStockError('내 주식 정보를 불러오지 못했습니다.');
-        return;
+        return false;
     }
 
     const holding = (portfolio.holdings || []).find((item) => {
@@ -94,6 +96,8 @@ async function renderDetailMyStock(symbol) {
         ${renderDetailHoldingSection(holding)}
         ${renderDetailTradeSection(trades || [])}
     `;
+
+    return true;
 }
 
 // 내 포트폴리오 조회
@@ -107,7 +111,7 @@ async function fetchMyPortfolio() {
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
+        redirectToLogin();
         return null;
     }
 
@@ -118,9 +122,8 @@ async function fetchMyPortfolio() {
         }
     });
 
-    if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+    if (isAuthError(response)) {
+        redirectToLogin();
         return null;
     }
 
@@ -133,10 +136,16 @@ async function fetchMyPortfolio() {
 
 // 현재 종목의 거래내역 조회
 async function fetchMyTrades(symbol) {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return [];
+    }
+
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
+        redirectToLogin();
         return [];
     }
 
@@ -147,6 +156,11 @@ async function fetchMyTrades(symbol) {
             'Authorization': `Bearer ${accessToken}`
         }
     });
+
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return [];
+    }
 
     if (!response.ok) {
         return [];
@@ -397,7 +411,7 @@ function bindStockTabs() {
     const tabPanels = document.querySelectorAll('.tab-panel');
 
     tabButtons.forEach((button) => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const target = button.dataset.tab;
 
             tabButtons.forEach((item) => item.classList.remove('active'));
@@ -410,8 +424,43 @@ function bindStockTabs() {
             if (targetPanel) {
                 targetPanel.classList.add('active');
             }
+
+            if (target === 'my-stock') {
+                await loadDetailMyStockTab();
+            }
         });
     });
+}
+
+async function loadDetailMyStockTab(force = false) {
+    if (detailMyStockLoaded && !force) {
+        return;
+    }
+
+    if (detailMyStockLoading) {
+        return;
+    }
+
+    detailMyStockLoading = true;
+
+    try {
+        if (stockDetailReady) {
+            await stockDetailReady;
+        }
+
+        if (!currentStock?.symbol) {
+            renderDetailMyStockError('종목 정보가 아직 준비되지 않았습니다.');
+            return;
+        }
+
+        const success = await renderDetailMyStock(currentStock.symbol);
+
+        if (success) {
+            detailMyStockLoaded = true;
+        }
+    } finally {
+        detailMyStockLoading = false;
+    }
 }
 
 // 관심종목 하트 클릭 시 추가 또는 삭제 처리
@@ -706,5 +755,6 @@ window.handleOrderSuccess = async function () {
         renderDetailStockInfo(currentStock, quote);
     }
 
-    await renderDetailMyStock(currentStock.symbol);
+    detailMyStockLoaded = false;
+    await loadDetailMyStockTab(true);
 };
