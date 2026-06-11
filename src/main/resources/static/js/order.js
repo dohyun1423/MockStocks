@@ -101,6 +101,12 @@ async function fetchOrderQuote(symbol) {
 
 // 내 포트폴리오 조회
 async function fetchOrderPortfolio() {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return null;
+    }
+
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {

@@ -37,8 +37,11 @@ public class StockService {
 
     // 종목명으로 상세 정보 조회
     public StockDetailResponse getStockDetailByName(String name) {
-        Stock stock = stockRepository
-                .findFirstByNameContainingIgnoreCaseOrSymbolContainingIgnoreCase(name, name)
+        String keyword = name.trim();
+
+        Stock stock = stockRepository.findFirstByNameIgnoreCase(keyword)
+                .or(() -> stockRepository.findBySymbol(keyword))
+                .or(() -> stockRepository.findFirstByNameContainingIgnoreCaseOrSymbolContainingIgnoreCase(keyword, keyword))
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 종목입니다."));
 
         return StockDetailResponse.from(stock);

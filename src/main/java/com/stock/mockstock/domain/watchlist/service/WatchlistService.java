@@ -7,6 +7,8 @@ import com.stock.mockstock.domain.watchlist.dto.WatchlistCreateRequest;
 import com.stock.mockstock.domain.watchlist.dto.WatchlistResponse;
 import com.stock.mockstock.domain.watchlist.entity.Watchlist;
 import com.stock.mockstock.domain.watchlist.repository.WatchlistRepository;
+import com.stock.mockstock.domain.stock.entity.Stock;
+import com.stock.mockstock.domain.stock.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,11 +22,12 @@ public class WatchlistService {
 
     private final WatchlistRepository watchlistRepository;
     private final UserRepository userRepository;
+    private final StockRepository stockRepository;
 
     // 로그인한 사용자의 관심종목 추가
     public void addWatchlist(String email, WatchlistCreateRequest request) {
         User user = getUser(email);
-        String stockName = request.getStockName().trim();
+        String stockName = request.getStockName();
 
         if (watchlistRepository.existsByUserAndStockName(user, stockName)) {
             return;
@@ -45,8 +48,19 @@ public class WatchlistService {
 
         return watchlistRepository.findAllByUserOrderByCreatedAtDesc(user)
                 .stream()
-                .map(WatchlistResponse::from)
+                .map(this::toWatchlistResponse)
                 .toList();
+    }
+
+    // 관심종목명으로 stock 테이블을 조회해서 symbol 정보를 함께 내려줌
+    private WatchlistResponse toWatchlistResponse(Watchlist watchlist) {
+        String stockName = watchlist.getStockName();
+
+        Stock stock = stockRepository.findFirstByNameIgnoreCase(stockName)
+                .or(() -> stockRepository.findFirstByNameContainingIgnoreCaseOrSymbolContainingIgnoreCase(stockName, stockName))
+                .orElse(null);
+
+        return WatchlistResponse.from(watchlist, stock);
     }
 
     // 로그인한 사용자의 관심종목 삭제

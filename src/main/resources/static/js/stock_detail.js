@@ -2,11 +2,19 @@
 
 let currentStock = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.authReady) {
+        const authenticated = await window.authReady;
+
+        if (!authenticated) {
+            return;
+        }
+    }
+
     bindStockTabs();
     bindFavoriteButton();
     bindDetailOrderButtons();
-    initStockDetail();
+    await initStockDetail();
 });
 
 // 상세페이지 매수/매도 버튼을 주문 모달과 연결
@@ -43,7 +51,6 @@ async function initStockDetail() {
     currentStock = await fetchStockDetail(keyword);
 
     if (!currentStock) {
-        await loadFavoriteStatus([keyword]);
         renderDetailMyStockError('종목 정보를 찾지 못했습니다.');
         return;
     }
@@ -58,7 +65,7 @@ async function initStockDetail() {
 
     renderDetailStockInfo(currentStock, quote);
     await renderDetailMyStock(currentStock.symbol);
-    await loadFavoriteStatus([currentStock.name, currentStock.symbol, keyword]);
+    await loadFavoriteStatus(currentStock);
 }
 
 // 상세페이지 내 주식 탭에 현재 종목의 보유 정보와 거래내역 표시
@@ -91,6 +98,12 @@ async function renderDetailMyStock(symbol) {
 
 // 내 포트폴리오 조회
 async function fetchMyPortfolio() {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return null;
+    }
+
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
@@ -104,6 +117,12 @@ async function fetchMyPortfolio() {
             'Authorization': `Bearer ${accessToken}`
         }
     });
+
+    if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('accessToken');
+        window.location.href = '/login';
+        return null;
+    }
 
     if (!response.ok) {
         return null;
@@ -429,21 +448,18 @@ function bindFavoriteButton() {
 }
 
 // DB 관심종목 목록을 조회해서 현재 종목의 하트 상태 반영
-async function loadFavoriteStatus(stockNames) {
+async function loadFavoriteStatus(stock) {
     const favoriteButton = document.getElementById('favorite-btn');
     const accessToken = localStorage.getItem('accessToken');
 
-    if (!favoriteButton || !accessToken) {
+    if (!favoriteButton || !accessToken || !stock) {
         return;
     }
 
-    const targetNames = stockNames
+    const targetSymbol = normalizeStockSymbol(stock.symbol);
+    const targetNames = [stock.name, stock.symbol, getTitleStockName()]
         .map(normalizeStockName)
         .filter((name) => name.length > 0);
-
-    if (targetNames.length === 0) {
-        return;
-    }
 
     const response = await fetch('/api/watchlists', {
         method: 'GET',
@@ -459,8 +475,11 @@ async function loadFavoriteStatus(stockNames) {
     const watchlists = await response.json();
 
     const exists = watchlists.some((item) => {
+        const itemSymbol = normalizeStockSymbol(item.symbol);
         const itemStockName = normalizeStockName(item.stockName || item.stock_name);
-        return targetNames.includes(itemStockName);
+
+        return (targetSymbol && itemSymbol === targetSymbol)
+            || targetNames.includes(itemStockName);
     });
 
     favoriteButton.classList.toggle('active', exists);
@@ -470,7 +489,7 @@ async function loadFavoriteStatus(stockNames) {
 async function addWatchlist(stockName) {
     const accessToken = localStorage.getItem('accessToken');
 
-    if (!accessToken) {
+    if (!accessToken || !stockName) {
         return false;
     }
 
@@ -492,7 +511,7 @@ async function addWatchlist(stockName) {
 async function removeWatchlist(stockName) {
     const accessToken = localStorage.getItem('accessToken');
 
-    if (!accessToken) {
+    if (!accessToken || !stockName) {
         return false;
     }
 

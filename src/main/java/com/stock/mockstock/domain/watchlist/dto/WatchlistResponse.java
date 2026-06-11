@@ -1,6 +1,7 @@
 // 관심종목 조회 결과를 내려주는 응답 DTO
 package com.stock.mockstock.domain.watchlist.dto;
 
+import com.stock.mockstock.domain.stock.entity.Stock;
 import com.stock.mockstock.domain.watchlist.entity.Watchlist;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,11 +12,15 @@ public class WatchlistResponse {
 
     private Long id;
     private String stockName;
+    private String symbol;
+    private String market;
 
-    public static WatchlistResponse from(Watchlist watchlist) {
+    public static WatchlistResponse from(Watchlist watchlist, Stock stock) {
         return new WatchlistResponse(
                 watchlist.getId(),
-                watchlist.getStockName()
+                watchlist.getStockName(),
+                stock == null ? null : stock.getSymbol(),
+                stock == null ? null : stock.getMarket()
         );
     }
 }

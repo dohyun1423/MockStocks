@@ -94,6 +94,7 @@ function renderWatchlists(watchlists) {
 
     watchlists.forEach((item) => {
         const stockName = item.stockName || item.stock_name;
+        const symbol = item.symbol;
 
         if (!stockName) {
             return;
@@ -105,7 +106,7 @@ function renderWatchlists(watchlists) {
         button.textContent = stockName;
 
         button.addEventListener('click', () => {
-            selectWatchlistStock(stockName);
+            selectWatchlistStock(stockName, symbol);
         });
 
         list.appendChild(button);
@@ -115,8 +116,10 @@ function renderWatchlists(watchlists) {
 }
 
 // 관심종목 클릭 시 종목 상세, 현재가, 가격 이력을 조회해서 화면 갱신
-async function selectWatchlistStock(stockName) {
-    const stock = await fetchStockDetail(stockName);
+async function selectWatchlistStock(stockName, symbol = null) {
+    const stock = symbol
+        ? await fetchStockDetailBySymbol(symbol)
+        : await fetchStockDetail(stockName);
 
     if (!stock) {
         renderMainChart(stockName, [], null, '1D');
@@ -264,6 +267,7 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
                                 <button
                                     type="button"
                                     class="chart-watchlist-btn active"
+                                    data-symbol="${escapeHtml(symbol)}"
                                     data-stock-name="${escapeHtml(stockName)}"
                                     aria-label="관심종목"
                                 >
@@ -359,7 +363,7 @@ function bindChartActionButtons() {
 async function addMainWatchlist(stockName) {
     const accessToken = localStorage.getItem('accessToken');
 
-    if (!accessToken) {
+    if (!accessToken || !stockName) {
         return false;
     }
 

@@ -1,7 +1,9 @@
 // 내 주식 탭에서 포트폴리오와 거래내역을 조회하고 화면에 표시하는 스크립트
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('holding-table-wrap')) {
+    const isMainDashboard = document.querySelector('.dashboard-tabs');
+
+    if (!isMainDashboard && document.getElementById('holding-table-wrap')) {
         loadPortfolioDashboard();
     }
 });
@@ -14,6 +16,12 @@ async function loadPortfolioDashboard() {
 
 // 내 포트폴리오 조회
 async function loadPortfolio() {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return;
+    }
+
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {

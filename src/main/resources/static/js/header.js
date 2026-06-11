@@ -1,7 +1,9 @@
 let currentUserInfo = null;
 
+window.authReady = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    checkLoginStatus();
+    window.authReady = checkLoginStatus();
     bindStockSearch();
     bindMyInfoModal();
 });
@@ -11,7 +13,7 @@ async function checkLoginStatus() {
 
     if (!accessToken) {
         window.location.href = '/login';
-        return;
+        return false;
     }
 
     try {
@@ -25,7 +27,7 @@ async function checkLoginStatus() {
         if (!response.ok) {
             localStorage.removeItem('accessToken');
             window.location.href = '/login';
-            return;
+            return false;
         }
 
         currentUserInfo = await response.json();
@@ -35,11 +37,22 @@ async function checkLoginStatus() {
         if (userNickname) {
             userNickname.textContent = currentUserInfo.nickname || currentUserInfo.email || 'USER';
         }
+
+        return true;
     } catch (error) {
         console.error(error);
         localStorage.removeItem('accessToken');
         window.location.href = '/login';
+        return false;
     }
+}
+
+async function waitAuthReady() {
+    if (!window.authReady) {
+        return true;
+    }
+
+    return await window.authReady;
 }
 
 function bindStockSearch() {

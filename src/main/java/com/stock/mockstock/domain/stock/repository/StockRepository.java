@@ -14,6 +14,8 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
             String symbol
     );
 
+    Optional<Stock> findFirstByNameIgnoreCase(String name);
+
     Optional<Stock> findFirstByNameContainingIgnoreCaseOrSymbolContainingIgnoreCase(
             String name,
             String symbol
