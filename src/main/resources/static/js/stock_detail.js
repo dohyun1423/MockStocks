@@ -690,6 +690,13 @@ async function renderDetailChart(symbol, period = '1D') {
         chartTitle.textContent = currentStock?.name || 'CHART';
     }
 
+    chartBox.innerHTML = `
+        <div class="chart-grid"></div>
+        <div class="tab-empty">
+            <p>차트 정보를 불러오는 중입니다.</p>
+        </div>
+    `;
+
     const histories = await fetchStockPriceHistories(symbol, period);
 
     if (!histories || histories.length === 0) {
@@ -747,7 +754,7 @@ function createDetailChartMarkup(histories) {
 
     return `
         <div class="chart-grid"></div>
-
+    
         <div class="detail-chart-stats">
             <div>
                 <span>현재</span>
@@ -766,7 +773,7 @@ function createDetailChartMarkup(histories) {
                 <strong>${formatNumber(latest.volume)}</strong>
             </div>
         </div>
-
+    
         <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
             <defs>
                 <linearGradient id="detailChartArea" x1="0" y1="0" x2="0" y2="1">
@@ -774,23 +781,23 @@ function createDetailChartMarkup(histories) {
                     <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
                 </linearGradient>
             </defs>
-
+    
             <path d="${areaPath}" fill="url(#detailChartArea)"></path>
             <path class="detail-chart-line" d="${linePath}"></path>
-
+    
             ${points.map((point, index) => {
-        if (index !== 0 && index !== points.length - 1 && index % Math.ceil(points.length / 6) !== 0) {
-            return '';
-        }
-
-        return `
+            if (index !== 0 && index !== points.length - 1 && index % Math.ceil(points.length / 6) !== 0) {
+                return '';
+            }
+    
+            return `
                     <circle class="detail-chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3">
                         <title>${escapeHtml(point.label)} / ${formatNumber(point.price)}원</title>
                     </circle>
                 `;
-    }).join('')}
+        }).join('')}
         </svg>
-
+    
         <div class="detail-chart-axis">
             <span>${escapeHtml(first.label)}</span>
             <span>${escapeHtml(latest.label)}</span>

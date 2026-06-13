@@ -1,3 +1,6 @@
+let selectedWatchlistSymbol = null;
+let draggedWatchlistId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     bindDashboardTabs();
     loadWatchlists();
@@ -43,6 +46,7 @@ function openStockFromPortfolio(symbol) {
     location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
 }
 
+// 내 관심 종목 리스트 불러오기
 async function loadWatchlists() {
     const accessToken = localStorage.getItem('accessToken');
     const watchlistPanel = document.querySelector('.watchlist-panel');
@@ -64,6 +68,16 @@ async function loadWatchlists() {
 
     const watchlists = await response.json();
     renderWatchlists(watchlists);
+
+    // 첫 번째 관심종목을 메인 화면 진입 시 자동 선택한다.
+    if (!selectedWatchlistSymbol && watchlists.length > 0) {
+        const first = watchlists[0];
+        const stockName = first.stockName || first.stock_name;
+
+        selectedWatchlistSymbol = first.symbol || null;
+        await selectWatchlistStock(stockName, first.symbol);
+        markSelectedWatchlist(first.id);
+    }
 }
 
 // 관심종목 목록 렌더링
@@ -104,15 +118,100 @@ function renderWatchlists(watchlists) {
         button.type = 'button';
         button.className = 'watchlist-item';
         button.textContent = stockName;
+        button.draggable = true;
+        button.dataset.watchlistId = item.id;
+        button.dataset.symbol = symbol || '';
+        button.dataset.stockName = stockName;
 
-        button.addEventListener('click', () => {
-            selectWatchlistStock(stockName, symbol);
+        if (selectedWatchlistSymbol && normalizeMainSymbol(symbol) === normalizeMainSymbol(selectedWatchlistSymbol)) {
+            button.classList.add('active');
+        }
+
+        button.addEventListener('click', async () => {
+            selectedWatchlistSymbol = symbol || null;
+            markSelectedWatchlist(item.id);
+            await selectWatchlistStock(stockName, symbol);
+        });
+
+        button.addEventListener('dragstart', () => {
+            draggedWatchlistId = item.id;
+            button.classList.add('dragging');
+        });
+
+        button.addEventListener('dragend', () => {
+            draggedWatchlistId = null;
+            button.classList.remove('dragging');
+        });
+
+        button.addEventListener('dragover', (event) => {
+            event.preventDefault();
+
+            const draggingButton = list.querySelector('.watchlist-item.dragging');
+
+            if (!draggingButton || draggingButton === button) {
+                return;
+            }
+
+            const rect = button.getBoundingClientRect();
+            const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
+
+            if (shouldInsertAfter) {
+                button.after(draggingButton);
+                return;
+            }
+
+            button.before(draggingButton);
+        });
+
+        button.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            await saveWatchlistOrder();
         });
 
         list.appendChild(button);
     });
 
     watchlistPanel.appendChild(list);
+}
+
+function markSelectedWatchlist(watchlistId) {
+    const buttons = document.querySelectorAll('.watchlist-item');
+
+    buttons.forEach((button) => {
+        button.classList.toggle(
+            'active',
+            String(button.dataset.watchlistId) === String(watchlistId)
+        );
+    });
+}
+
+async function saveWatchlistOrder() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        return;
+    }
+
+    const ids = Array.from(document.querySelectorAll('.watchlist-item'))
+        .map((button) => Number(button.dataset.watchlistId))
+        .filter((id) => Number.isFinite(id));
+
+    await fetch('/api/watchlists/order', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+            watchlistIds: ids
+        })
+    });
+}
+
+function normalizeMainSymbol(value) {
+    return String(value || '')
+        .replace(/\s+/g, '')
+        .toUpperCase();
 }
 
 // 관심종목 클릭 시 종목 상세, 현재가, 가격 이력을 조회해서 화면 갱신

@@ -34,4 +34,12 @@ public class Watchlist extends BaseTimeEntity {
     // 관심종목 이름
     @Column(name = "stock_name", nullable = false)
     private String stockName;
+
+    // 관심종목 목록
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
+    public void updateSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }

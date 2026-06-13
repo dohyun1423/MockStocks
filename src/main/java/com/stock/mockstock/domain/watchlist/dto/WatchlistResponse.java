@@ -1,4 +1,3 @@
-// 관심종목 조회 결과를 내려주는 응답 DTO
 package com.stock.mockstock.domain.watchlist.dto;
 
 import com.stock.mockstock.domain.stock.entity.Stock;
@@ -14,13 +13,15 @@ public class WatchlistResponse {
     private String stockName;
     private String symbol;
     private String market;
+    private Integer sortOrder;
 
     public static WatchlistResponse from(Watchlist watchlist, Stock stock) {
         return new WatchlistResponse(
                 watchlist.getId(),
                 watchlist.getStockName(),
                 stock == null ? null : stock.getSymbol(),
-                stock == null ? null : stock.getMarket()
+                stock == null ? null : stock.getMarket(),
+                watchlist.getSortOrder()
         );
     }
 }
