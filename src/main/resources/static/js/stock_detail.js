@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindStockTabs();
     bindFavoriteButton();
     bindDetailOrderButtons();
+    bindDetailChartPeriodButtons();
 
     stockDetailReady = initStockDetail();
     await stockDetailReady;
@@ -31,6 +32,25 @@ function bindDetailOrderButtons() {
 
     sellButton?.addEventListener('click', () => {
         openDetailOrderModal('SELL');
+    });
+}
+
+function bindDetailChartPeriodButtons() {
+    const buttons = document.querySelectorAll('.detail-chart-periods button');
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            if (!currentStock?.symbol) {
+                return;
+            }
+
+            const period = button.dataset.chartPeriod || '1D';
+
+            buttons.forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+
+            await renderDetailChart(currentStock.symbol, period);
+        });
     });
 }
 
@@ -67,6 +87,7 @@ async function initStockDetail() {
     }
 
     renderDetailStockInfo(currentStock, quote);
+    await renderDetailChart(currentStock.symbol, '1D');
     await loadFavoriteStatus(currentStock);
 }
 
@@ -622,6 +643,159 @@ async function fetchStockQuote(symbol) {
     }
 
     return await response.json();
+}
+
+async function fetchStockPriceHistories(symbol, period = '1D') {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return [];
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        redirectToLogin();
+        return [];
+    }
+
+    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return [];
+    }
+
+    if (!response.ok) {
+        return [];
+    }
+
+    return await response.json();
+}
+
+async function renderDetailChart(symbol, period = '1D') {
+    const chartBox = document.getElementById('detail-chart-box');
+    const chartTitle = document.getElementById('detail-chart-title');
+
+    if (!chartBox || !symbol) {
+        return;
+    }
+
+    if (chartTitle) {
+        chartTitle.textContent = currentStock?.name || 'CHART';
+    }
+
+    const histories = await fetchStockPriceHistories(symbol, period);
+
+    if (!histories || histories.length === 0) {
+        chartBox.innerHTML = `
+            <div class="chart-grid"></div>
+            <div class="tab-empty">
+                <p>차트 데이터가 없습니다.</p>
+                <span>가격 이력을 불러오지 못했습니다.</span>
+            </div>
+        `;
+        return;
+    }
+
+    chartBox.innerHTML = createDetailChartMarkup(histories);
+}
+
+function createDetailChartMarkup(histories) {
+    const width = 900;
+    const height = 360;
+    const padding = 34;
+
+    const prices = histories.map((item) => Number(item.closePrice || 0));
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice || 1;
+
+    const points = histories.map((item, index) => {
+        const price = Number(item.closePrice || 0);
+        const x = padding + index * ((width - padding * 2) / Math.max(histories.length - 1, 1));
+        const y = height - padding - ((price - minPrice) / priceRange) * (height - padding * 2);
+
+        return {
+            x,
+            y,
+            price,
+            label: item.label
+        };
+    });
+
+    const linePath = points.map((point, index) => {
+        const command = index === 0 ? 'M' : 'L';
+        return `${command}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+    }).join(' ');
+
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    const areaPath = `${linePath} L${lastPoint.x.toFixed(1)},${height} L${firstPoint.x.toFixed(1)},${height} Z`;
+
+    const latest = histories[histories.length - 1];
+    const first = histories[0];
+    const change = Number(latest.closePrice || 0) - Number(first.closePrice || 0);
+    const changeRate = Number(first.closePrice || 0) === 0
+        ? 0
+        : (change / Number(first.closePrice)) * 100;
+
+    return `
+        <div class="chart-grid"></div>
+
+        <div class="detail-chart-stats">
+            <div>
+                <span>현재</span>
+                <strong>${formatNumber(latest.closePrice)}원</strong>
+            </div>
+            <div>
+                <span>기간 등락</span>
+                <strong class="${change >= 0 ? 'up' : 'down'}">${formatSignedNumber(change)}원</strong>
+            </div>
+            <div>
+                <span>기간 등락률</span>
+                <strong class="${changeRate >= 0 ? 'up' : 'down'}">${formatSignedNumber(changeRate.toFixed(2))}%</strong>
+            </div>
+            <div>
+                <span>거래량</span>
+                <strong>${formatNumber(latest.volume)}</strong>
+            </div>
+        </div>
+
+        <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+            <defs>
+                <linearGradient id="detailChartArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.22"/>
+                    <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+
+            <path d="${areaPath}" fill="url(#detailChartArea)"></path>
+            <path class="detail-chart-line" d="${linePath}"></path>
+
+            ${points.map((point, index) => {
+        if (index !== 0 && index !== points.length - 1 && index % Math.ceil(points.length / 6) !== 0) {
+            return '';
+        }
+
+        return `
+                    <circle class="detail-chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3">
+                        <title>${escapeHtml(point.label)} / ${formatNumber(point.price)}원</title>
+                    </circle>
+                `;
+    }).join('')}
+        </svg>
+
+        <div class="detail-chart-axis">
+            <span>${escapeHtml(first.label)}</span>
+            <span>${escapeHtml(latest.label)}</span>
+        </div>
+    `;
 }
 
 // quote 응답을 상세 화면 가격 카드에 표시

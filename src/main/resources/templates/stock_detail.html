@@ -64,10 +64,24 @@
 
     <section class="tab-content">
         <div class="tab-panel active" id="tab-chart">
-            <div class="chart-grid"></div>
-            <div class="tab-empty">
-                <p>차트 영역</p>
-                <span>추후 선택한 종목의 차트 데이터를 표시합니다.</span>
+            <div class="detail-chart-header">
+                <div>
+                    <h3 id="detail-chart-title">CHART</h3>
+                </div>
+
+                <div class="detail-chart-periods">
+                    <button type="button" class="active" data-chart-period="1D">1D</button>
+                    <button type="button" data-chart-period="1W">1W</button>
+                    <button type="button" data-chart-period="1M">1M</button>
+                    <button type="button" data-chart-period="1Y">1Y</button>
+                </div>
+            </div>
+
+            <div class="detail-chart-box" id="detail-chart-box">
+                <div class="chart-grid"></div>
+                <div class="tab-empty">
+                    <p>차트 정보를 불러오는 중입니다.</p>
+                </div>
             </div>
         </div>
 
