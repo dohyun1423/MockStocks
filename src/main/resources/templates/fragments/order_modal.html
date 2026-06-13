@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="orderModal">
+    <div class="order-modal-overlay" id="order-modal-overlay">
+        <section class="order-modal" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+            <header class="order-modal-header">
+                <div>
+                    <p class="order-kicker">// ORDER</p>
+                    <h2 id="order-modal-title">주문</h2>
+                </div>
+
+                <button type="button" class="order-close-btn" onclick="closeOrderModal()" aria-label="주문창 닫기">
+                    ×
+                </button>
+            </header>
+
+            <div class="order-stock-summary">
+                <div>
+                    <span class="order-label">종목명</span>
+                    <strong id="order-stock-name">-</strong>
+                </div>
+            </div>
+
+            <div class="order-tabs">
+                <button type="button" id="order-buy-tab" onclick="setOrderType('BUY')">매수</button>
+                <button type="button" id="order-sell-tab" onclick="setOrderType('SELL')">매도</button>
+            </div>
+
+            <div class="order-info-grid">
+                <div class="order-info-card">
+                    <span class="order-label">현재가</span>
+                    <strong id="order-current-price">-</strong>
+                </div>
+                <div class="order-info-card">
+                    <span class="order-label">보유 현금</span>
+                    <strong id="order-cash-balance">-</strong>
+                </div>
+                <div class="order-info-card">
+                    <span class="order-label">보유 수량</span>
+                    <strong id="order-holding-quantity">-</strong>
+                </div>
+                <div class="order-info-card">
+                    <span class="order-label">예상 금액</span>
+                    <strong id="order-total-amount">-</strong>
+                </div>
+            </div>
+
+            <label class="order-quantity-field">
+                <span class="order-label">수량</span>
+                <input type="number" id="order-quantity-input" min="1" value="1">
+            </label>
+
+            <p class="order-message" id="order-message"></p>
+
+            <button type="button" class="order-submit-btn" id="order-submit-btn" onclick="submitOrder()">
+                주문하기
+            </button>
+        </section>
+    </div>
+</div>
+</body>
+</html>

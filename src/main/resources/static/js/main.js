@@ -1,11 +1,57 @@
+let selectedWatchlistSymbol = null;
+let draggedWatchlistId = null;
+
 document.addEventListener('DOMContentLoaded', () => {
+    bindDashboardTabs();
     loadWatchlists();
 });
 
+// 메인 화면의 관심종목/내 주식 탭 전환
+function bindDashboardTabs() {
+    const tabButtons = document.querySelectorAll('.dashboard-tabs button');
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+            const target = button.dataset.dashboardTab;
+
+            switchDashboardTab(target);
+
+            if (target === 'portfolio' && typeof loadPortfolioDashboard === 'function') {
+                await loadPortfolioDashboard();
+            }
+        });
+    });
+}
+
+// 메인 대시보드 탭을 공통으로 전환
+function switchDashboardTab(target) {
+    const tabButtons = document.querySelectorAll('.dashboard-tabs button');
+    const panels = document.querySelectorAll('.dashboard-panel');
+
+    tabButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.dashboardTab === target);
+    });
+
+    panels.forEach((panel) => {
+        panel.classList.toggle('active', panel.id === `dashboard-${target}`);
+    });
+}
+
+// 내 주식 탭에서 보유 종목을 선택하면 해당 종목 상세페이지로 이동
+function openStockFromPortfolio(symbol) {
+    if (!symbol) {
+        return;
+    }
+
+    location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
+}
+
+// 내 관심 종목 리스트 불러오기
 async function loadWatchlists() {
     const accessToken = localStorage.getItem('accessToken');
+    const watchlistPanel = document.querySelector('.watchlist-panel');
 
-    if (!accessToken) {
+    if (!accessToken || !watchlistPanel) {
         return;
     }
 
@@ -21,10 +67,40 @@ async function loadWatchlists() {
     }
 
     const watchlists = await response.json();
+    renderWatchlists(watchlists);
+
+    // 첫 번째 관심종목을 메인 화면 진입 시 자동 선택한다.
+    if (!selectedWatchlistSymbol && watchlists.length > 0) {
+        const first = watchlists[0];
+        const stockName = first.stockName || first.stock_name;
+
+        selectedWatchlistSymbol = first.symbol || null;
+        await selectWatchlistStock(stockName, first.symbol);
+        markSelectedWatchlist(first.id);
+    }
+}
+
+// 관심종목 목록 렌더링
+function renderWatchlists(watchlists) {
+    const watchlistPanel = document.querySelector('.watchlist-panel');
+    const previousList = document.querySelector('.watchlist-list');
     const emptyState = document.querySelector('.watchlist-panel .empty-state');
 
-    if (!emptyState || watchlists.length === 0) {
+    if (!watchlistPanel) {
         return;
+    }
+
+    previousList?.remove();
+
+    if (!watchlists || watchlists.length === 0) {
+        if (emptyState) {
+            emptyState.style.display = 'flex';
+        }
+        return;
+    }
+
+    if (emptyState) {
+        emptyState.style.display = 'none';
     }
 
     const list = document.createElement('div');
@@ -32,6 +108,7 @@ async function loadWatchlists() {
 
     watchlists.forEach((item) => {
         const stockName = item.stockName || item.stock_name;
+        const symbol = item.symbol;
 
         if (!stockName) {
             return;
@@ -41,23 +118,110 @@ async function loadWatchlists() {
         button.type = 'button';
         button.className = 'watchlist-item';
         button.textContent = stockName;
+        button.draggable = true;
+        button.dataset.watchlistId = item.id;
+        button.dataset.symbol = symbol || '';
+        button.dataset.stockName = stockName;
 
-        button.addEventListener('click', () => {
-            selectWatchlistStock(stockName);
+        if (selectedWatchlistSymbol && normalizeMainSymbol(symbol) === normalizeMainSymbol(selectedWatchlistSymbol)) {
+            button.classList.add('active');
+        }
+
+        button.addEventListener('click', async () => {
+            selectedWatchlistSymbol = symbol || null;
+            markSelectedWatchlist(item.id);
+            await selectWatchlistStock(stockName, symbol);
+        });
+
+        button.addEventListener('dragstart', () => {
+            draggedWatchlistId = item.id;
+            button.classList.add('dragging');
+        });
+
+        button.addEventListener('dragend', () => {
+            draggedWatchlistId = null;
+            button.classList.remove('dragging');
+        });
+
+        button.addEventListener('dragover', (event) => {
+            event.preventDefault();
+
+            const draggingButton = list.querySelector('.watchlist-item.dragging');
+
+            if (!draggingButton || draggingButton === button) {
+                return;
+            }
+
+            const rect = button.getBoundingClientRect();
+            const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
+
+            if (shouldInsertAfter) {
+                button.after(draggingButton);
+                return;
+            }
+
+            button.before(draggingButton);
+        });
+
+        button.addEventListener('drop', async (event) => {
+            event.preventDefault();
+            await saveWatchlistOrder();
         });
 
         list.appendChild(button);
     });
 
-    emptyState.replaceWith(list);
+    watchlistPanel.appendChild(list);
+}
+
+function markSelectedWatchlist(watchlistId) {
+    const buttons = document.querySelectorAll('.watchlist-item');
+
+    buttons.forEach((button) => {
+        button.classList.toggle(
+            'active',
+            String(button.dataset.watchlistId) === String(watchlistId)
+        );
+    });
+}
+
+async function saveWatchlistOrder() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        return;
+    }
+
+    const ids = Array.from(document.querySelectorAll('.watchlist-item'))
+        .map((button) => Number(button.dataset.watchlistId))
+        .filter((id) => Number.isFinite(id));
+
+    await fetch('/api/watchlists/order', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+            watchlistIds: ids
+        })
+    });
+}
+
+function normalizeMainSymbol(value) {
+    return String(value || '')
+        .replace(/\s+/g, '')
+        .toUpperCase();
 }
 
 // 관심종목 클릭 시 종목 상세, 현재가, 가격 이력을 조회해서 화면 갱신
-async function selectWatchlistStock(stockName) {
-    const stock = await fetchStockDetail(stockName);
+async function selectWatchlistStock(stockName, symbol = null) {
+    const stock = symbol
+        ? await fetchStockDetailBySymbol(symbol)
+        : await fetchStockDetail(stockName);
 
     if (!stock) {
-        renderMainChart(stockName, [], null, '1M');
+        renderMainChart(stockName, [], null, '1D');
         renderStockSideInfo(stockName, null, null);
         return;
     }
@@ -77,6 +241,28 @@ async function fetchStockDetail(stockName) {
     }
 
     const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
+}
+
+// 종목코드로 종목 상세 정보 조회
+async function fetchStockDetailBySymbol(symbol) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        return null;
+    }
+
+    const response = await fetch(`/api/stocks/symbol/${encodeURIComponent(symbol)}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -134,7 +320,7 @@ async function fetchStockPriceHistories(symbol, period) {
 }
 
 // 가격 이력 데이터로 메인 차트 영역 갱신
-function renderMainChart(stockName, priceHistories = [], symbol = null, activePeriod = '1M') {
+function renderMainChart(stockName, priceHistories = [], symbol = null, activePeriod = '1D') {
     const chartPanel = document.querySelector('.chart-panel');
 
     if (!chartPanel) {
@@ -147,9 +333,49 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
 
     chartPanel.innerHTML = `
         <div class="panel-header chart-main-header">
-            <div>
-                <p class="panel-kicker">// SELECTED STOCK</p>
-                <h1>${escapeHtml(stockName)}</h1>
+            <div class="chart-title-row">
+                <div>
+                    <p class="panel-kicker">// SELECTED STOCK</p>
+                    <h1>${escapeHtml(stockName)}</h1>
+                </div>
+
+                ${
+                    symbol
+                        ? `
+                            <div class="chart-action-buttons">
+                                <button
+                                    type="button"
+                                    class="chart-trade-btn buy"
+                                    data-symbol="${escapeHtml(symbol)}"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                    data-order-type="BUY"
+                                >
+                                    매수
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="chart-trade-btn sell"
+                                    data-symbol="${escapeHtml(symbol)}"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                    data-order-type="SELL"
+                                >
+                                    매도
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="chart-watchlist-btn active"
+                                    data-symbol="${escapeHtml(symbol)}"
+                                    data-stock-name="${escapeHtml(stockName)}"
+                                    aria-label="관심종목"
+                                >
+                                    ♥
+                                </button>
+                            </div>
+                        `
+                        : ''
+                }
             </div>
 
             <div class="chart-periods">
@@ -164,8 +390,8 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
             <div class="chart-grid"></div>
 
             ${
-        points.length > 0
-            ? `
+                points.length > 0
+                    ? `
                         <svg class="mock-chart" viewBox="0 0 900 420" preserveAspectRatio="none">
                             <defs>
                                 <linearGradient id="mainChartArea" x1="0" y1="0" x2="0" y2="1">
@@ -180,17 +406,78 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
 
                         <div class="chart-watermark">PRICE HISTORY</div>
                     `
-            : `
+                    : `
                         <div class="chart-placeholder">
                             <p>가격 이력이 없습니다.</p>
                             <span>차트에 표시할 데이터를 찾을 수 없습니다.</span>
                         </div>
                     `
-    }
+            }
         </div>
     `;
 
     bindChartPeriodButtons(stockName, symbol);
+    bindChartActionButtons();
+}
+
+// 차트 상단의 매수, 매도, 관심 버튼 연결
+function bindChartActionButtons() {
+    const tradeButtons = document.querySelectorAll('.chart-trade-btn');
+
+    tradeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const symbol = button.dataset.symbol;
+            const stockName = button.dataset.stockName;
+            const orderType = button.dataset.orderType;
+
+            if (!symbol || !stockName || !orderType) {
+                return;
+            }
+
+            openOrderModal(symbol, stockName, orderType);
+        });
+    });
+
+    const watchlistButton = document.querySelector('.chart-watchlist-btn');
+
+    if (watchlistButton) {
+        watchlistButton.addEventListener('click', async () => {
+            const stockName = watchlistButton.dataset.stockName;
+
+            if (!stockName) {
+                return;
+            }
+
+            const success = await addMainWatchlist(stockName);
+
+            if (success) {
+                watchlistButton.classList.add('active');
+                await loadWatchlists();
+            }
+        });
+    }
+}
+
+// 메인 차트에서 관심종목 추가
+async function addMainWatchlist(stockName) {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !stockName) {
+        return false;
+    }
+
+    const response = await fetch('/api/watchlists', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+            stockName: stockName
+        })
+    });
+
+    return response.ok;
 }
 
 // 차트 기간 버튼 클릭 시 해당 기간의 가격 이력 다시 조회

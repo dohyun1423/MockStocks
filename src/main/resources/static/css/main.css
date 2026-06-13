@@ -320,3 +320,118 @@ body {
     line-height: 1.6;
 }
 
+.chart-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.chart-action-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 22px;
+}
+
+.chart-trade-btn,
+.chart-watchlist-btn {
+    height: 38px;
+    border: 1px solid var(--border);
+    font-family: var(--font-body);
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.chart-trade-btn {
+    width: 72px;
+    color: #000;
+}
+
+.chart-trade-btn.buy {
+    background: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.55);
+    color: #000;
+}
+
+.chart-trade-btn.sell {
+    background: #60a5fa;
+    border-color: rgba(96, 165, 250, 0.55);
+    color: #000;
+}
+
+.chart-watchlist-btn {
+    width: 38px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.chart-watchlist-btn.active {
+    color: #ff4560;
+    border-color: rgba(255, 69, 96, 0.45);
+    background: rgba(255, 69, 96, 0.08);
+}
+
+.dashboard-tabs {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 28px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.dashboard-tabs button {
+    height: 34px;
+    padding: 0 22px;
+    border: 1px solid var(--border);
+    border-right: none;
+    background: var(--card);
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.dashboard-tabs button:last-child {
+    border-right: 1px solid var(--border);
+}
+
+.dashboard-tabs button.active {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.dashboard-panel {
+    display: none;
+    height: calc(100vh - 72px - 54px);
+}
+
+.dashboard-panel.active {
+    display: block;
+}
+
+.dashboard-panel .main-layout {
+    height: 100%;
+}
+
+.watchlist-item {
+    cursor: grab;
+}
+
+.watchlist-item:active {
+    cursor: grabbing;
+}
+
+.watchlist-item.active {
+    border-color: var(--accent);
+    background: rgba(0, 229, 160, 0.12);
+    color: var(--text);
+}
+
+.watchlist-item.dragging {
+    opacity: 0.45;
+}

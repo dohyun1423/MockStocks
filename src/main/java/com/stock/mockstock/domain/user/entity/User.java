@@ -32,4 +32,19 @@ public class User extends BaseTimeEntity {
 
     @Column(nullable = false) // 초기 자금
     private Long cash;
+
+    // 매수 시 사용자의 현금을 차감
+    public void decreaseCash(Long amount) {
+        if (cash < amount) {
+            throw new IllegalArgumentException("보유 현금이 부족합니다.");
+        }
+
+        this.cash -= amount;
+    }
+
+    // 매도 시 사용자의 현금을 증가
+    public void increaseCash(Long amount) {
+        this.cash += amount;
+    }
 }
+

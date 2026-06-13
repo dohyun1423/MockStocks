@@ -3,6 +3,7 @@ package com.stock.mockstock.domain.user.controller;
 
 import com.stock.mockstock.domain.user.dto.SignupRequest;
 import com.stock.mockstock.domain.user.service.UserService;
+import com.stock.mockstock.domain.user.dto.UserInfoResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -35,10 +36,9 @@ public class UserController {
         return new LoginResponse(token);
     }
 
-    // 현재 로그인한 사용자 이메일 조회
+    // 현재 로그인한 사용자 정보 조회
     @GetMapping("/me")
-    public String me(Authentication authentication) {
-
-        return authentication.getName();
+    public UserInfoResponse me(Authentication authentication) {
+        return userService.getMyInfo(authentication.getName());
     }
 }

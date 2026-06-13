@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockVault - Portfolio</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/css/common.css}" href="/css/common.css">
+    <link rel="stylesheet" th:href="@{/css/header.css}" href="/css/header.css">
+    <link rel="stylesheet" th:href="@{/css/order.css}" href="/css/order.css">
+    <link rel="stylesheet" th:href="@{/css/portfolio.css}" href="/css/portfolio.css">
+</head>
+<body>
+
+<div th:replace="~{fragments/header :: header}"></div>
+
+<main class="portfolio-layout">
+    <section class="portfolio-header">
+        <div>
+            <p class="panel-kicker">// MY PORTFOLIO</p>
+            <h1>PORTFOLIO</h1>
+        </div>
+    </section>
+
+    <section class="portfolio-summary-grid">
+        <div class="summary-card">
+            <span>보유 현금</span>
+            <strong id="cash-balance">-</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>총 자산</span>
+            <strong id="total-asset">-</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>총 평가금액</span>
+            <strong id="total-evaluation">-</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>총 손익</span>
+            <strong id="total-profit-loss">-</strong>
+        </div>
+
+        <div class="summary-card">
+            <span>총 수익률</span>
+            <strong id="total-profit-rate">-</strong>
+        </div>
+    </section>
+
+    <section class="holding-section">
+        <div class="section-header">
+            <p class="panel-kicker">// HOLDINGS</p>
+            <h2>MY STOCKS</h2>
+        </div>
+
+        <div class="holding-table-wrap" id="holding-table-wrap">
+            <div class="portfolio-empty">
+                <p>보유 종목이 없습니다.</p>
+                <span>관심종목이나 상세 화면에서 매수를 진행해보세요.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="trade-section">
+        <div class="section-header">
+            <p class="panel-kicker">// TRADE HISTORY</p>
+            <h2>TRADES</h2>
+        </div>
+
+        <div class="trade-table-wrap" id="trade-table-wrap">
+            <div class="portfolio-empty">
+                <p>거래내역이 없습니다.</p>
+                <span>매수 또는 매도를 진행하면 거래내역이 표시됩니다.</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{fragments/order_modal :: orderModal}"></div>
+
+<script th:src="@{/js/header.js}" src="/js/header.js"></script>
+<script th:src="@{/js/order.js}" src="/js/order.js"></script>
+<script th:src="@{/js/portfolio.js}" src="/js/portfolio.js"></script>
+</body>
+</html>

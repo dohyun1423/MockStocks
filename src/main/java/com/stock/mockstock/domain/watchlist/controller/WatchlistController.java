@@ -4,6 +4,7 @@ package com.stock.mockstock.domain.watchlist.controller;
 import com.stock.mockstock.domain.watchlist.dto.WatchlistCreateRequest;
 import com.stock.mockstock.domain.watchlist.dto.WatchlistResponse;
 import com.stock.mockstock.domain.watchlist.service.WatchlistService;
+import com.stock.mockstock.domain.watchlist.dto.WatchlistOrderUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -31,6 +32,15 @@ public class WatchlistController {
     @GetMapping
     public List<WatchlistResponse> getMyWatchlists(Authentication authentication) {
         return watchlistService.getMyWatchlists(authentication.getName());
+    }
+
+    // 관심종목 목록의 사용자 지정 순서를 저장한다.
+    @PatchMapping("/order")
+    public void updateWatchlistOrder(
+            Authentication authentication,
+            @RequestBody WatchlistOrderUpdateRequest request
+    ) {
+        watchlistService.updateWatchlistOrder(authentication.getName(), request);
     }
 
     // 관심종목 삭제 요청 처리

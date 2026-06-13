@@ -31,43 +31,75 @@ public class Stock extends BaseTimeEntity {
     @Column(nullable = false)
     private String market;
 
-    // 업종 예: 반도체, 금융, 바이오
+    // 업종 정보는 마스터 파일에서 바로 알기 어려우므로 기본값으로 저장
     @Column(nullable = false)
     private String sector;
 
-    // 현재가
     @Column(nullable = false)
     private Long currentPrice;
 
-    // 전일 대비 가격
     @Column(nullable = false)
     private Long changePrice;
 
-    // 등락률
     @Column(nullable = false, precision = 6, scale = 2)
     private BigDecimal changeRate;
 
-    // 거래량
     @Column(nullable = false)
     private Long volume;
 
-    // 시가총액
     @Column(nullable = false)
     private Long marketCap;
 
-    // 상장주식수
     @Column(nullable = false)
     private Long listedShares;
 
-    // PER
     @Column(precision = 8, scale = 2)
     private BigDecimal per;
 
-    // EPS
     @Column(precision = 12, scale = 2)
     private BigDecimal eps;
 
-    // 배당수익률
     @Column(precision = 6, scale = 2)
     private BigDecimal dividendYield;
+
+    // 종목 마스터 파일에서 읽은 기본 정보로 신규 종목 생성
+    public static Stock createMasterStock(
+            String symbol,
+            String name,
+            String market,
+            Long basePrice,
+            Long listedShares,
+            Long marketCap
+    ) {
+        return Stock.builder()
+                .symbol(symbol)
+                .name(name)
+                .market(market)
+                .sector("미분류")
+                .currentPrice(basePrice)
+                .changePrice(0L)
+                .changeRate(BigDecimal.ZERO)
+                .volume(0L)
+                .marketCap(marketCap)
+                .listedShares(listedShares)
+                .per(BigDecimal.ZERO)
+                .eps(BigDecimal.ZERO)
+                .dividendYield(BigDecimal.ZERO)
+                .build();
+    }
+
+    // 이미 존재하는 종목을 마스터 파일 기준으로 갱신
+    public void updateMasterInfo(
+            String name,
+            String market,
+            Long basePrice,
+            Long listedShares,
+            Long marketCap
+    ) {
+        this.name = name;
+        this.market = market;
+        this.currentPrice = basePrice;
+        this.listedShares = listedShares;
+        this.marketCap = marketCap;
+    }
 }

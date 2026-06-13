@@ -1,14 +1,20 @@
-document.addEventListener('DOMContentLoaded', () => {
-    checkLoginStatus();
+let currentUserInfo = null;
+
+window.authReady = initializeAuth();
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await window.authReady;
+
     bindStockSearch();
+    bindMyInfoModal();
 });
 
-async function checkLoginStatus() {
+async function initializeAuth() {
     const accessToken = localStorage.getItem('accessToken');
 
     if (!accessToken) {
-        window.location.href = '/login';
-        return;
+        redirectToLogin();
+        return false;
     }
 
     try {
@@ -19,23 +25,46 @@ async function checkLoginStatus() {
             }
         });
 
+        if (response.status === 401) {
+            redirectToLogin();
+            return false;
+        }
+
         if (!response.ok) {
-            localStorage.removeItem('accessToken');
-            window.location.href = '/login';
-            return;
+            console.warn('사용자 정보 조회 실패:', response.status);
+            return true;
         }
 
-        const email = await response.text();
-        const userEmail = document.getElementById('user-email');
+        currentUserInfo = await response.json();
 
-        if (userEmail) {
-            userEmail.textContent = email;
+        const userNickname = document.getElementById('user-nickname');
+
+        if (userNickname) {
+            userNickname.textContent = currentUserInfo.nickname || currentUserInfo.email || 'USER';
         }
+
+        return true;
     } catch (error) {
-        console.error(error);
-        localStorage.removeItem('accessToken');
-        window.location.href = '/login';
+        console.error('사용자 정보 조회 중 네트워크 오류:', error);
+        return true;
     }
+}
+
+async function waitAuthReady() {
+    if (!window.authReady) {
+        window.authReady = initializeAuth();
+    }
+
+    return await window.authReady;
+}
+
+function redirectToLogin() {
+    localStorage.removeItem('accessToken');
+    window.location.replace('/login');
+}
+
+function isAuthError(response) {
+    return response.status === 401;
 }
 
 function bindStockSearch() {
@@ -127,7 +156,7 @@ function renderSearchResults(stocks) {
     }
 
     results.innerHTML = stocks.map((stock) => `
-        <button type="button" class="search-result-item" onclick="goStockDetail('${escapeHtml(stock.name)}')">
+        <button type="button" class="search-result-item" onclick="goStockDetail('${escapeHtml(stock.symbol)}')">
             <span class="search-result-name">${escapeHtml(stock.name)}</span>
             <span class="search-result-meta">${escapeHtml(stock.symbol)} · ${escapeHtml(stock.market)}</span>
         </button>
@@ -147,8 +176,8 @@ function clearSearchResults() {
     results.classList.remove('active');
 }
 
-function goStockDetail(stockName) {
-    window.location.href = `/stocks/detail?keyword=${encodeURIComponent(stockName)}`;
+function goStockDetail(symbol) {
+    window.location.href = `/stocks/detail?keyword=${encodeURIComponent(symbol)}`;
 }
 
 function handleLogout() {
@@ -156,8 +185,54 @@ function handleLogout() {
     window.location.href = '/login';
 }
 
+function bindMyInfoModal() {
+    const profileButton = document.getElementById('profile-menu-btn');
+    const myInfoOverlay = document.getElementById('my-info-modal-overlay');
+
+    if (profileButton) {
+        profileButton.addEventListener('click', showMyInfo);
+    }
+
+    if (myInfoOverlay) {
+        myInfoOverlay.addEventListener('click', (event) => {
+            if (event.target === myInfoOverlay) {
+                closeMyInfoModal();
+            }
+        });
+    }
+}
+
+function showMyInfo() {
+    const overlay = document.getElementById('my-info-modal-overlay');
+
+    if (!overlay || !currentUserInfo) {
+        return;
+    }
+
+    setHeaderText('my-info-email', currentUserInfo.email || '-');
+    setHeaderText('my-info-nickname', currentUserInfo.nickname || '-');
+
+    overlay.classList.add('active');
+}
+
+function closeMyInfoModal() {
+    const overlay = document.getElementById('my-info-modal-overlay');
+
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
+}
+
+function setHeaderText(id, value) {
+    const element = document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+}
+
 function escapeHtml(value) {
-    return String(value)
+    return String(value || '')
         .replaceAll('&', '&amp;')
         .replaceAll('<', '&lt;')
         .replaceAll('>', '&gt;')

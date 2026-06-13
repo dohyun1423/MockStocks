@@ -23,7 +23,7 @@ public class StockQuoteResponse {
     private Long lowPrice;
     private Long basePrice;
 
-    // KIS 원본 응답을 화면용 응답으로 변환
+    // KIS 원본 응답을 화면용 현재가 응답으로 변환
     public static StockQuoteResponse from(KisQuoteResponse kisQuoteResponse) {
         KisQuoteResponse.Output output = kisQuoteResponse.getOutput();
 

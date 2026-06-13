@@ -15,7 +15,7 @@ import lombok.*;
         name = "watchlists",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_watchlist_user_stock_name",
+                        name = "uk_watchlist_user_stock",
                         columnNames = {"user_id", "stock_name"}
                 )
         }
@@ -26,10 +26,20 @@ public class Watchlist extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "stock_name", nullable = false)
-    private String stockName;
-
+    // 관심종목을 등록한 사용자
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    // 관심종목 이름
+    @Column(name = "stock_name", nullable = false)
+    private String stockName;
+
+    // 관심종목 목록
+    @Column(name = "sort_order")
+    private Integer sortOrder;
+
+    public void updateSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
 }

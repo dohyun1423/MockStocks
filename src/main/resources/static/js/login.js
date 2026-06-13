@@ -9,6 +9,58 @@ const defaultButtonHtml = `
   SIGN IN
 `;
 
+document.addEventListener('DOMContentLoaded', () => {
+    redirectIfAlreadyLoggedIn();
+    bindLoginEnterKey();
+});
+
+// 이미 로그인한 사용자가 로그인 페이지에 접근하면 메인으로 이동
+async function redirectIfAlreadyLoggedIn() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/users/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+
+        if (response.ok) {
+            window.location.replace('/main');
+            return;
+        }
+
+        localStorage.removeItem('accessToken');
+    } catch (error) {
+        console.error(error);
+        localStorage.removeItem('accessToken');
+    }
+}
+
+// 이메일 또는 비밀번호 입력 중 Enter를 누르면 로그인 실행
+function bindLoginEnterKey() {
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    [emailInput, passwordInput].forEach((input) => {
+        if (!input) {
+            return;
+        }
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleLogin();
+            }
+        });
+    });
+}
+
 function showLoginError(message) {
     const loginError = document.getElementById('login-error');
 
