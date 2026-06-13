@@ -716,17 +716,38 @@ async function renderDetailChart(symbol, period = '1D') {
 function createDetailChartMarkup(histories) {
     const width = 900;
     const height = 360;
-    const padding = 34;
+    const paddingTop = 24;
+    const paddingRight = 72;
+    const paddingBottom = 34;
+    const paddingLeft = 34;
 
-    const prices = histories.map((item) => Number(item.closePrice || 0));
+    const prices = histories.flatMap((item) => [
+        Number(item.highPrice || item.closePrice || 0),
+        Number(item.lowPrice || item.closePrice || 0),
+        Number(item.closePrice || 0)
+    ]);
+
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
     const priceRange = maxPrice - minPrice || 1;
 
+    const latest = histories[histories.length - 1];
+    const first = histories[0];
+
+    const firstPrice = Number(first.closePrice || 0);
+    const latestPrice = Number(latest.closePrice || 0);
+    const change = latestPrice - firstPrice;
+    const changeRate = firstPrice === 0 ? 0 : (change / firstPrice) * 100;
+    const isUp = change >= 0;
+
+    const chartClass = isUp ? 'up' : 'down';
+    // 상세 차트의 실제 선 색상을 JS에서 직접 지정해 CSS 충돌 가능성을 제거한다.
+    const chartColor = chartClass === 'down' ? '#3b82f6' : '#ff4560';
+
     const points = histories.map((item, index) => {
         const price = Number(item.closePrice || 0);
-        const x = padding + index * ((width - padding * 2) / Math.max(histories.length - 1, 1));
-        const y = height - padding - ((price - minPrice) / priceRange) * (height - padding * 2);
+        const x = paddingLeft + index * ((width - paddingLeft - paddingRight) / Math.max(histories.length - 1, 1));
+        const y = height - paddingBottom - ((price - minPrice) / priceRange) * (height - paddingTop - paddingBottom);
 
         return {
             x,
@@ -743,66 +764,130 @@ function createDetailChartMarkup(histories) {
 
     const firstPoint = points[0];
     const lastPoint = points[points.length - 1];
-    const areaPath = `${linePath} L${lastPoint.x.toFixed(1)},${height} L${firstPoint.x.toFixed(1)},${height} Z`;
+    const areaPath = `${linePath} L${lastPoint.x.toFixed(1)},${height - paddingBottom} L${firstPoint.x.toFixed(1)},${height - paddingBottom} Z`;
 
-    const latest = histories[histories.length - 1];
-    const first = histories[0];
-    const change = Number(latest.closePrice || 0) - Number(first.closePrice || 0);
-    const changeRate = Number(first.closePrice || 0) === 0
-        ? 0
-        : (change / Number(first.closePrice)) * 100;
+    const highPrice = Math.max(...histories.map((item) => Number(item.highPrice || item.closePrice || 0)));
+    const lowPrice = Math.min(...histories.map((item) => Number(item.lowPrice || item.closePrice || 0)));
+    const openPrice = Number(first.openPrice || first.closePrice || 0);
+
+    const yLabels = createChartPriceLabels(minPrice, maxPrice, 5).map((price) => {
+        const y = height - paddingBottom - ((price - minPrice) / priceRange) * (height - paddingTop - paddingBottom);
+
+        return {
+            price,
+            y
+        };
+    });
 
     return `
         <div class="chart-grid"></div>
-    
+
         <div class="detail-chart-stats">
             <div>
                 <span>현재</span>
-                <strong>${formatNumber(latest.closePrice)}원</strong>
+                <strong class="${chartClass}">${formatNumber(latestPrice)}원</strong>
             </div>
             <div>
                 <span>기간 등락</span>
-                <strong class="${change >= 0 ? 'up' : 'down'}">${formatSignedNumber(change)}원</strong>
+                <strong class="${chartClass}">${formatSignedNumber(change)}원</strong>
             </div>
             <div>
                 <span>기간 등락률</span>
-                <strong class="${changeRate >= 0 ? 'up' : 'down'}">${formatSignedNumber(changeRate.toFixed(2))}%</strong>
+                <strong class="${chartClass}">${formatSignedNumber(changeRate.toFixed(2))}%</strong>
+            </div>
+            <div>
+                <span>고가 / 저가</span>
+                <strong>${formatNumber(highPrice)} / ${formatNumber(lowPrice)}원</strong>
+            </div>
+            <div>
+                <span>시작가</span>
+                <strong>${formatNumber(openPrice)}원</strong>
             </div>
             <div>
                 <span>거래량</span>
                 <strong>${formatNumber(latest.volume)}</strong>
             </div>
         </div>
-    
+
         <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
             <defs>
-                <linearGradient id="detailChartArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.22"/>
-                    <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
+                <linearGradient id="detailChartAreaUp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ff4560" stop-opacity="0.24"/>
+                    <stop offset="100%" stop-color="#ff4560" stop-opacity="0"/>
+                </linearGradient>
+
+                <linearGradient id="detailChartAreaDown" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.24"/>
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
                 </linearGradient>
             </defs>
-    
-            <path d="${areaPath}" fill="url(#detailChartArea)"></path>
-            <path class="detail-chart-line" d="${linePath}"></path>
-    
+
+            ${yLabels.map((label) => `
+                <line
+                    class="detail-chart-guide"
+                    x1="${paddingLeft}"
+                    y1="${label.y.toFixed(1)}"
+                    x2="${width - paddingRight}"
+                    y2="${label.y.toFixed(1)}"
+                ></line>
+                <text
+                    class="detail-chart-price-label"
+                    x="${width - paddingRight + 12}"
+                    y="${label.y.toFixed(1)}"
+                    dominant-baseline="middle"
+                >${formatNumber(Math.round(label.price))}</text>
+            `).join('')}
+
+            <path
+                d="${areaPath}"
+                fill="url(#${isUp ? 'detailChartAreaUp' : 'detailChartAreaDown'})"
+            ></path>
+
+            <path
+                class="detail-chart-line ${chartClass}"
+                d="${linePath}"
+                style="stroke: ${chartColor};"
+            ></path>
+
             ${points.map((point, index) => {
-            if (index !== 0 && index !== points.length - 1 && index % Math.ceil(points.length / 6) !== 0) {
-                return '';
-            }
-    
-            return `
-                    <circle class="detail-chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3">
+        const step = Math.ceil(points.length / 6);
+
+        if (index !== 0 && index !== points.length - 1 && index % step !== 0) {
+            return '';
+        }
+
+        return `
+                    <circle
+                        class="detail-chart-point ${chartClass}"
+                        cx="${point.x.toFixed(1)}"
+                        cy="${point.y.toFixed(1)}"
+                        r="3"
+                        style="fill: ${chartColor};"
+                    >
                         <title>${escapeHtml(point.label)} / ${formatNumber(point.price)}원</title>
                     </circle>
                 `;
-        }).join('')}
+    }).join('')}
         </svg>
-    
+
         <div class="detail-chart-axis">
             <span>${escapeHtml(first.label)}</span>
             <span>${escapeHtml(latest.label)}</span>
         </div>
     `;
+}
+
+// 차트 오른쪽 가격축에 표시할 가격 라벨을 만든다.
+function createChartPriceLabels(minPrice, maxPrice, count) {
+    if (count <= 1 || minPrice === maxPrice) {
+        return [maxPrice];
+    }
+
+    const step = (maxPrice - minPrice) / (count - 1);
+
+    return Array.from({ length: count }, (_, index) => {
+        return maxPrice - step * index;
+    });
 }
 
 // quote 응답을 상세 화면 가격 카드에 표시

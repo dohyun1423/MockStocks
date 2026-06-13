@@ -229,7 +229,7 @@ async function selectWatchlistStock(stockName, symbol = null) {
     const quote = await fetchStockQuote(stock.symbol);
     const priceHistories = await fetchStockPriceHistories(stock.symbol, '1D');
 
-    renderMainChart(stock.name, priceHistories, stock.symbol, '1D');
+    renderMainChart(stock.name, priceHistories, stock.symbol, '1D', quote);
     renderStockSideInfo(stock.name, stock, quote);
 }
 
@@ -319,8 +319,20 @@ async function fetchStockPriceHistories(symbol, period) {
     return await response.json();
 }
 
+// 현재가 quote의 등락값을 기준으로 메인 차트 상승/하락 색상을 결정한다.
+function resolveMainChartClass(quote, hasChartData, firstPrice, latestPrice) {
+    const quoteChangeValue = quote?.changePrice ?? quote?.changeRate;
+    const quoteChangeNumber = Number(quoteChangeValue);
+
+    if (quoteChangeValue !== null && quoteChangeValue !== undefined && !Number.isNaN(quoteChangeNumber)) {
+        return quoteChangeNumber < 0 ? 'down' : 'up';
+    }
+
+    return hasChartData && latestPrice < firstPrice ? 'down' : 'up';
+}
+
 // 가격 이력 데이터로 메인 차트 영역 갱신
-function renderMainChart(stockName, priceHistories = [], symbol = null, activePeriod = '1D') {
+function renderMainChart(stockName, priceHistories = [], symbol = null, activePeriod = '1D', quote = null) {
     const chartPanel = document.querySelector('.chart-panel');
 
     if (!chartPanel) {
@@ -330,6 +342,14 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
     const points = createChartPoints(priceHistories);
     const linePath = createLinePath(points);
     const areaPath = createAreaPath(points);
+    // 차트 데이터가 있을 때만 상승/하락 색상을 계산한다.
+    const hasChartData = points.length > 0 && Array.isArray(priceHistories) && priceHistories.length > 0;
+    const firstPrice = hasChartData ? Number(priceHistories[0]?.closePrice || 0) : 0;
+    const latestPrice = hasChartData ? Number(priceHistories[priceHistories.length - 1]?.closePrice || 0) : 0;
+    // 메인 화면의 정보 카드와 차트 색상이 같은 등락 기준을 쓰도록 quote를 우선 사용한다.
+    const chartClass = resolveMainChartClass(quote, hasChartData, firstPrice, latestPrice);
+    const chartColor = chartClass === 'down' ? '#3b82f6' : '#ff4560';
+    const chartAreaId = chartClass === 'down' ? 'mainChartAreaDown' : 'mainChartAreaUp';
 
     chartPanel.innerHTML = `
         <div class="panel-header chart-main-header">
@@ -394,14 +414,23 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
                     ? `
                         <svg class="mock-chart" viewBox="0 0 900 420" preserveAspectRatio="none">
                             <defs>
-                                <linearGradient id="mainChartArea" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stop-color="#00e5a0" stop-opacity="0.18"/>
-                                    <stop offset="100%" stop-color="#00e5a0" stop-opacity="0"/>
+                                <linearGradient id="mainChartAreaUp" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#ff4560" stop-opacity="0.18"/>
+                                    <stop offset="100%" stop-color="#ff4560" stop-opacity="0"/>
+                                </linearGradient>
+
+                                <linearGradient id="mainChartAreaDown" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.18"/>
+                                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
                                 </linearGradient>
                             </defs>
 
-                            <path d="${areaPath}" fill="url(#mainChartArea)"></path>
-                            <path class="chart-line" d="${linePath}"></path>
+                            <path d="${areaPath}" fill="url(#${chartAreaId})"></path>
+                            <path
+                                class="chart-line ${chartClass}"
+                                d="${linePath}"
+                                style="stroke: ${chartColor};"
+                            ></path>
                         </svg>
 
                         <div class="chart-watermark">PRICE HISTORY</div>
@@ -416,7 +445,7 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
         </div>
     `;
 
-    bindChartPeriodButtons(stockName, symbol);
+    bindChartPeriodButtons(stockName, symbol, quote);
     bindChartActionButtons();
 }
 
@@ -480,8 +509,8 @@ async function addMainWatchlist(stockName) {
     return response.ok;
 }
 
-// 차트 기간 버튼 클릭 시 해당 기간의 가격 이력 다시 조회
-function bindChartPeriodButtons(stockName, symbol) {
+// 차트 기간 버튼 클릭 시 같은 quote 기준으로 상승/하락 색상을 유지한다.
+function bindChartPeriodButtons(stockName, symbol, quote = null) {
     const buttons = document.querySelectorAll('.chart-periods button');
 
     buttons.forEach((button) => {
@@ -493,7 +522,7 @@ function bindChartPeriodButtons(stockName, symbol) {
             }
 
             const priceHistories = await fetchStockPriceHistories(symbol, period);
-            renderMainChart(stockName, priceHistories, symbol, period);
+            renderMainChart(stockName, priceHistories, symbol, period, quote);
         });
     });
 }

@@ -24,16 +24,17 @@ body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .stock-detail-layout {
-    height: calc(100vh - 72px);
+    min-height: calc(100vh - 72px);
+    height: auto;
     padding: 18px 28px 28px;
     background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,229,160,0.04), transparent 60%), var(--bg);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    overflow: visible;
+    display: block;
 }
 
 .panel-kicker {
@@ -138,21 +139,21 @@ body {
 }
 
 .tab-content {
-    flex: 1 1 auto;
-    min-height: 0;
+    min-height: 820px;
     margin-top: 16px;
     border: 1px solid var(--border);
     background: rgba(15,25,35,0.45);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .tab-panel {
-    height: 100%;
+    min-height: 820px;
+    height: auto;
     display: none;
-    padding: 22px 24px 80px;
+    padding: 22px 24px 120px;
     position: relative;
-    overflow-y: auto;
+    overflow: visible;
 }
 
 .tab-panel.active {
@@ -214,16 +215,16 @@ body {
 
 .detail-chart-box {
     position: relative;
-    height: calc(100% - 48px);
-    min-height: 460px;
-    overflow: hidden;
+    min-height: 700px;
+    height: auto;
+    overflow: visible;
 }
 
 .detail-chart-stats {
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 14px;
 }
@@ -249,19 +250,47 @@ body {
 }
 
 .detail-chart-stats strong.up {
-    color: var(--accent);
+    color: var(--red);
 }
 
 .detail-chart-stats strong.down {
-    color: var(--red);
+    color: #3b82f6;
+}
+
+.detail-chart-line.up {
+    stroke: var(--red);
+}
+
+.detail-chart-line.down {
+    stroke: #3b82f6;
+}
+
+.detail-chart-point.up {
+    fill: var(--red);
+}
+
+.detail-chart-point.down {
+    fill: #3b82f6;
+}
+
+.detail-chart-guide {
+    stroke: rgba(220, 232, 240, 0.08);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.detail-chart-price-label {
+    fill: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
 }
 
 .detail-price-chart {
     position: relative;
     z-index: 2;
     width: 100%;
-    height: calc(100% - 86px);
-    min-height: 340px;
+    height: 560px;
+    min-height: 560px;
 }
 
 .detail-chart-line {
@@ -312,11 +341,11 @@ body {
 }
 
 .meta-value.up {
-    color: var(--accent);
+    color: var(--red);
 }
 
 .meta-value.down {
-    color: var(--red);
+    color: #3b82f6;
 }
 
 .stock-action-buttons {
@@ -407,12 +436,12 @@ body {
 
 .detail-info-card strong.up,
 .detail-info-list dd.up {
-    color: var(--accent);
+    color: var(--red);
 }
 
 .detail-info-card strong.down,
 .detail-info-list dd.down {
-    color: var(--red);
+    color: #3b82f6;
 }
 
 .detail-info-list {
@@ -489,11 +518,11 @@ body {
 }
 
 .detail-my-card strong.up {
-    color: var(--accent);
+    color: var(--red);
 }
 
 .detail-my-card strong.down {
-    color: var(--red);
+    color: #3b82f6;
 }
 
 .detail-trade-table {
@@ -611,6 +640,11 @@ body {
     }
 
     .detail-chart-box {
+        min-height: 540px;
+    }
+
+    .detail-price-chart {
+        height: 420px;
         min-height: 420px;
     }
 }

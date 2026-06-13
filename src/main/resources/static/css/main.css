@@ -205,18 +205,26 @@ body {
     inset: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.42;
+    opacity: 0.86;
 }
 
 .chart-line {
     fill: none;
-    stroke: var(--accent);
-    stroke-width: 2;
+    stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 1200;
     stroke-dashoffset: 1200;
     animation: draw-line 2.4s ease forwards;
+}
+
+/* 메인 관심종목 차트의 상승/하락 색상을 구분한다. */
+.chart-line.up {
+    stroke: #ff4560;
+}
+
+.chart-line.down {
+    stroke: #3b82f6;
 }
 
 .chart-watermark {
@@ -306,12 +314,12 @@ body {
 
 .stock-info-card strong.up,
 .stock-info-section dd.up {
-    color: var(--accent);
+    color: #ff4560;
 }
 
 .stock-info-card strong.down,
 .stock-info-section dd.down {
-    color: #ff4560;
+    color: #3b82f6;
 }
 
 .stock-info-message {
