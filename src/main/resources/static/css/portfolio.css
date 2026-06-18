@@ -109,12 +109,12 @@ body {
 
 .summary-card strong.up,
 .holding-table .up {
-    color: var(--accent);
+    color: var(--red);
 }
 
 .summary-card strong.down,
 .holding-table .down {
-    color: var(--red);
+    color: #3b82f6;
 }
 
 .holding-section {
