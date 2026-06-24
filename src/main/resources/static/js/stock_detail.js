@@ -4,6 +4,12 @@ let currentStock = null;
 let stockDetailReady = null;
 let detailMyStockLoaded = false;
 let detailMyStockLoading = false;
+let detailOrderbookLoaded = false;
+let detailOrderbookLoading = false;
+let detailRealtimeSocket = null;
+let detailLatestOrderbook = null;
+let detailChartHistories = [];
+let detailActiveChartPeriod = '1D';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const authenticated = await waitAuthReady();
@@ -45,6 +51,8 @@ function bindDetailChartPeriodButtons() {
             }
 
             const period = button.dataset.chartPeriod || '1D';
+            // 현재 선택된 차트 기간을 저장해서 실시간 체결가 반영 여부를 판단한다.
+            detailActiveChartPeriod = period;
 
             buttons.forEach((item) => item.classList.remove('active'));
             button.classList.add('active');
@@ -78,6 +86,9 @@ async function initStockDetail() {
         return;
     }
 
+    // 상세페이지의 현재 종목 실시간 체결가/호가 데이터를 구독한다.
+    connectDetailRealtimeSocket(currentStock.symbol);
+
     setStockTitle(currentStock.name);
 
     const quote = await fetchStockQuote(currentStock.symbol);
@@ -89,6 +100,189 @@ async function initStockDetail() {
     renderDetailStockInfo(currentStock, quote);
     await renderDetailChart(currentStock.symbol, '1D');
     await loadFavoriteStatus(currentStock);
+}
+
+// 상세페이지에서 현재 종목의 실시간 체결가와 호가 WebSocket을 구독한다.
+function connectDetailRealtimeSocket(symbol) {
+    const token = localStorage.getItem('accessToken');
+
+    if (!symbol || !token) {
+        return;
+    }
+
+    if (detailRealtimeSocket && detailRealtimeSocket.readyState === WebSocket.OPEN) {
+        detailRealtimeSocket.send(JSON.stringify({
+            type: 'SUBSCRIBE',
+            symbol,
+            token
+        }));
+        return;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    detailRealtimeSocket = new WebSocket(`${protocol}://${window.location.host}/ws/stocks`);
+
+    detailRealtimeSocket.onopen = () => {
+        detailRealtimeSocket.send(JSON.stringify({
+            type: 'SUBSCRIBE',
+            symbol,
+            token
+        }));
+    };
+
+    detailRealtimeSocket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+
+        console.log('DETAIL REALTIME RAW:', message);
+
+        handleDetailRealtimeMessage(message);
+    };
+
+    detailRealtimeSocket.onclose = (event) => {
+        console.log('DETAIL REALTIME CLOSED:', event.code, event.reason);
+    };
+
+    detailRealtimeSocket.onerror = (event) => {
+        console.log('DETAIL REALTIME ERROR:', event);
+    };
+}
+
+// 서버 WebSocket에서 받은 실시간 메시지를 타입별로 화면에 반영한다.
+function handleDetailRealtimeMessage(message) {
+    if (!message || !message.type) {
+        return;
+    }
+
+    if (message.type === 'SUBSCRIBED') {
+        console.log('DETAIL REALTIME SUBSCRIBED:', message.symbol);
+        return;
+    }
+
+    if (message.type === 'TRADE') {
+        applyRealtimeTrade(message.data);
+        return;
+    }
+
+    if (message.type === 'ORDERBOOK') {
+        applyRealtimeOrderbook(message.data);
+    }
+}
+
+// 실시간 체결가로 상세 상단 가격과 1D 차트 마지막 값을 갱신한다.
+function applyRealtimeTrade(trade) {
+    if (!trade || normalizeStockSymbol(trade.symbol) !== normalizeStockSymbol(currentStock?.symbol)) {
+        return;
+    }
+
+    const quote = {
+        currentPrice: trade.currentPrice,
+        changePrice: trade.changePrice,
+        changeRate: trade.changeRate,
+        volume: trade.accumulatedVolume
+    };
+
+    renderStockQuote(quote);
+    updateRealtimeChartPoint(trade);
+
+    if (detailLatestOrderbook) {
+        detailLatestOrderbook = {
+            ...detailLatestOrderbook,
+            currentPrice: trade.currentPrice,
+            openPrice: trade.openPrice,
+            highPrice: trade.highPrice,
+            lowPrice: trade.lowPrice,
+            volume: trade.accumulatedVolume
+        };
+
+        if (detailOrderbookLoaded) {
+            renderDetailOrderbook(detailLatestOrderbook);
+        }
+    }
+}
+
+// 실시간 호가로 호가 탭의 매도/매수 가격과 잔량을 갱신한다.
+function applyRealtimeOrderbook(orderbook) {
+    if (!orderbook || normalizeStockSymbol(orderbook.symbol) !== normalizeStockSymbol(currentStock?.symbol)) {
+        return;
+    }
+
+    const baseOrderbook = detailLatestOrderbook || {
+        symbol: orderbook.symbol,
+        currentPrice: Number(currentStock?.currentPrice || 0),
+        basePrice: Number(currentStock?.currentPrice || 0),
+        openPrice: 0,
+        highPrice: 0,
+        lowPrice: 0,
+        volume: 0
+    };
+
+    const basePrice = Number(baseOrderbook.basePrice || 0);
+
+    const realtimeOrderbook = {
+        ...baseOrderbook,
+        symbol: orderbook.symbol,
+        totalAskQuantity: orderbook.totalAskQuantity,
+        totalBidQuantity: orderbook.totalBidQuantity,
+        levels: (orderbook.levels || []).map((level) => ({
+            level: level.level,
+            askPrice: level.askPrice,
+            askQuantity: level.askQuantity,
+            askRate: calculateOrderbookRate(level.askPrice, basePrice),
+            bidPrice: level.bidPrice,
+            bidQuantity: level.bidQuantity,
+            bidRate: calculateOrderbookRate(level.bidPrice, basePrice)
+        }))
+    };
+
+    detailLatestOrderbook = realtimeOrderbook;
+
+    if (detailOrderbookLoaded) {
+        renderDetailOrderbook(realtimeOrderbook);
+    }
+}
+
+// 실시간 체결가를 1D 차트의 마지막 포인트에 반영한다.
+function updateRealtimeChartPoint(trade) {
+    if (detailActiveChartPeriod !== '1D' || detailChartHistories.length === 0) {
+        return;
+    }
+
+    const chartBox = document.getElementById('detail-chart-box');
+
+    if (!chartBox) {
+        return;
+    }
+
+    const latestIndex = detailChartHistories.length - 1;
+    const latest = detailChartHistories[latestIndex];
+    const currentPrice = Number(trade.currentPrice || 0);
+
+    if (currentPrice <= 0) {
+        return;
+    }
+
+    detailChartHistories[latestIndex] = {
+        ...latest,
+        label: formatRealtimeTradeTime(trade.tradeTime) || latest.label,
+        closePrice: currentPrice,
+        highPrice: Math.max(Number(latest.highPrice || currentPrice), currentPrice),
+        lowPrice: Math.min(Number(latest.lowPrice || currentPrice), currentPrice),
+        volume: trade.accumulatedVolume || latest.volume
+    };
+
+    chartBox.innerHTML = createDetailChartMarkup(detailChartHistories);
+    bindDetailChartTooltip();
+}
+
+// KIS HHmmss 체결 시간을 HH:mm:ss 형식으로 바꾼다.
+function formatRealtimeTradeTime(tradeTime) {
+    const value = String(tradeTime || '');
+
+    if (value.length !== 6) {
+        return '';
+    }
+
+    return `${value.substring(0, 2)}:${value.substring(2, 4)}:${value.substring(4, 6)}`;
 }
 
 // 상세페이지 내 주식 탭에 현재 종목의 보유 정보와 거래내역 표시
@@ -446,11 +640,217 @@ function bindStockTabs() {
                 targetPanel.classList.add('active');
             }
 
+            if (target === 'orderbook') {
+                await loadDetailOrderbookTab();
+            }
+
             if (target === 'my-stock') {
                 await loadDetailMyStockTab();
             }
         });
     });
+}
+
+// 호가 탭 최초 진입 시 현재 종목의 호가 데이터를 조회한다.
+async function loadDetailOrderbookTab(force = false) {
+    if (detailOrderbookLoaded && !force) {
+        return;
+    }
+
+    if (detailOrderbookLoading) {
+        return;
+    }
+
+    detailOrderbookLoading = true;
+
+    try {
+        if (stockDetailReady) {
+            await stockDetailReady;
+        }
+
+        if (!currentStock?.symbol) {
+            renderDetailOrderbookError('종목 정보가 아직 준비되지 않았습니다.');
+            return;
+        }
+
+        const orderbook = await fetchStockOrderbook(currentStock.symbol);
+
+        if (!orderbook) {
+            renderDetailOrderbookError();
+            return;
+        }
+
+        renderDetailOrderbook(orderbook);
+        detailOrderbookLoaded = true;
+    } finally {
+        detailOrderbookLoading = false;
+    }
+}
+
+// 종목코드 기준 호가 API를 호출한다.
+async function fetchStockOrderbook(symbol) {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return null;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken || !symbol) {
+        redirectToLogin();
+        return null;
+    }
+
+    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/orderbook`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return null;
+    }
+
+    if (!response.ok) {
+        return null;
+    }
+
+    return await response.json();
+}
+
+// 호가 데이터를 가격 중심 ladder 형태로 렌더링한다.
+function renderDetailOrderbook(orderbook) {
+    const wrap = document.getElementById('detail-orderbook-wrap');
+
+    if (!wrap || !orderbook) {
+        return;
+    }
+
+    // 실시간 호가 수신 시 REST로 가져온 기준가/현재가 정보를 유지하기 위해 최신 호가 상태를 보관한다.
+    detailLatestOrderbook = orderbook;
+
+    const levels = orderbook.levels || [];
+
+    if (levels.length === 0) {
+        renderDetailOrderbookError('호가 데이터가 없습니다.');
+        return;
+    }
+
+    const askLevels = [...levels].reverse();
+    const bidLevels = [...levels];
+
+    wrap.innerHTML = `
+        <section class="detail-orderbook-ladder">
+            <div class="orderbook-main">
+                <div class="orderbook-side-label sell">판매 대기 ${formatNumber(orderbook.totalAskQuantity)}</div>
+
+                <div class="orderbook-rows">
+                    ${askLevels.map((level) => renderOrderbookAskRow(level)).join('')}
+
+                    <div class="orderbook-current-row">
+                        <strong>${formatNumber(orderbook.currentPrice)}원</strong>
+                        <span>${formatSignedNumber(calculateOrderbookRate(orderbook.currentPrice, orderbook.basePrice))}%</span>
+                    </div>
+
+                    ${bidLevels.map((level) => renderOrderbookBidRow(level)).join('')}
+                </div>
+
+                <div class="orderbook-side-label buy">구매 대기 ${formatNumber(orderbook.totalBidQuantity)}</div>
+            </div>
+
+            <aside class="orderbook-info-panel">
+                <dl>
+                    <div><dt>종목코드</dt><dd>${escapeHtml(orderbook.symbol)}</dd></div>
+                    <div><dt>기준가</dt><dd>${formatNumber(orderbook.basePrice)}원</dd></div>
+                    <div><dt>시가</dt><dd>${formatNumber(orderbook.openPrice)}원</dd></div>
+                    <div><dt>고가</dt><dd class="up">${formatNumber(orderbook.highPrice)}원</dd></div>
+                    <div><dt>저가</dt><dd class="down">${formatNumber(orderbook.lowPrice)}원</dd></div>
+                    <div><dt>거래량</dt><dd>${formatNumber(orderbook.volume)}</dd></div>
+                </dl>
+            </aside>
+        </section>
+    `;
+}
+
+function renderOrderbookAskRow(level) {
+    return `
+        <div class="orderbook-row ask">
+            <div class="orderbook-quantity left">
+                <span style="width: ${getOrderbookBarWidth(level.askQuantity)}%"></span>
+                <strong>${formatNumber(level.askQuantity)}</strong>
+            </div>
+            <div class="orderbook-price sell">
+                <strong>${formatNumber(level.askPrice)}</strong>
+                <em>${formatSignedNumber(level.askRate)}%</em>
+            </div>
+            <div class="orderbook-quantity right"></div>
+        </div>
+    `;
+}
+
+function renderOrderbookBidRow(level) {
+    return `
+        <div class="orderbook-row bid">
+            <div class="orderbook-quantity left"></div>
+            <div class="orderbook-price buy">
+                <strong>${formatNumber(level.bidPrice)}</strong>
+                <em>${formatSignedNumber(level.bidRate)}%</em>
+            </div>
+            <div class="orderbook-quantity right">
+                <span style="width: ${getOrderbookBarWidth(level.bidQuantity)}%"></span>
+                <strong>${formatNumber(level.bidQuantity)}</strong>
+            </div>
+        </div>
+    `;
+}
+
+function getOrderbookBarWidth(quantity) {
+    const value = Number(quantity || 0);
+    return Math.min(100, Math.max(8, value / 1000));
+}
+
+function getOrderbookPriceClass(rate) {
+    const value = Number(rate || 0);
+
+    if (value > 0) {
+        return 'up';
+    }
+
+    if (value < 0) {
+        return 'down';
+    }
+
+    return '';
+}
+
+function calculateOrderbookRate(price, basePrice) {
+    const current = Number(price || 0);
+    const base = Number(basePrice || 0);
+
+    if (current === 0 || base === 0) {
+        return 0;
+    }
+
+    return Math.round(((current - base) * 10000 / base)) / 100;
+}
+
+// 호가 조회 실패 또는 빈 데이터 상태를 표시한다.
+function renderDetailOrderbookError(message = '호가 정보를 불러오지 못했습니다.') {
+    const wrap = document.getElementById('detail-orderbook-wrap');
+
+    if (!wrap) {
+        return;
+    }
+
+    wrap.innerHTML = `
+        <div class="detail-my-empty">
+            <p>${escapeHtml(message)}</p>
+            <span>잠시 후 다시 시도해 주세요.</span>
+        </div>
+    `;
 }
 
 async function loadDetailMyStockTab(force = false) {
@@ -661,6 +1061,7 @@ async function fetchStockPriceHistories(symbol, period = '1D') {
 
     const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
         method: 'GET',
+        cache: 'no-store',
         headers: {
             'Authorization': `Bearer ${accessToken}`
         }
@@ -679,6 +1080,9 @@ async function fetchStockPriceHistories(symbol, period = '1D') {
 }
 
 async function renderDetailChart(symbol, period = '1D') {
+    // 현재 렌더링 중인 차트 기간을 저장한다.
+    detailActiveChartPeriod = period;
+
     const chartBox = document.getElementById('detail-chart-box');
     const chartTitle = document.getElementById('detail-chart-title');
 
@@ -710,7 +1114,10 @@ async function renderDetailChart(symbol, period = '1D') {
         return;
     }
 
+    // 실시간 체결가 수신 시 마지막 차트 포인트를 갱신하기 위해 최신 차트 데이터를 보관한다.
+    detailChartHistories = histories;
     chartBox.innerHTML = createDetailChartMarkup(histories);
+    bindDetailChartTooltip();
 }
 
 function createDetailChartMarkup(histories) {
@@ -764,7 +1171,6 @@ function createDetailChartMarkup(histories) {
 
     const firstPoint = points[0];
     const lastPoint = points[points.length - 1];
-    const areaPath = `${linePath} L${lastPoint.x.toFixed(1)},${height - paddingBottom} L${firstPoint.x.toFixed(1)},${height - paddingBottom} Z`;
 
     const highPrice = Math.max(...histories.map((item) => Number(item.highPrice || item.closePrice || 0)));
     const lowPrice = Math.min(...histories.map((item) => Number(item.lowPrice || item.closePrice || 0)));
@@ -810,17 +1216,6 @@ function createDetailChartMarkup(histories) {
         </div>
 
         <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-            <defs>
-                <linearGradient id="detailChartAreaUp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#ff4560" stop-opacity="0.24"/>
-                    <stop offset="100%" stop-color="#ff4560" stop-opacity="0"/>
-                </linearGradient>
-
-                <linearGradient id="detailChartAreaDown" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.24"/>
-                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
-                </linearGradient>
-            </defs>
 
             ${yLabels.map((label) => `
                 <line
@@ -836,19 +1231,25 @@ function createDetailChartMarkup(histories) {
                     y="${label.y.toFixed(1)}"
                     dominant-baseline="middle"
                 >${formatNumber(Math.round(label.price))}</text>
-            `).join('')}
-
-            <path
-                d="${areaPath}"
-                fill="url(#${isUp ? 'detailChartAreaUp' : 'detailChartAreaDown'})"
-            ></path>
+            `).join('')}      
 
             <path
                 class="detail-chart-line ${chartClass}"
                 d="${linePath}"
                 style="stroke: ${chartColor};"
             ></path>
-
+            ${points.slice(1).map((point, index) => {
+                const prevPoint = points[index];
+        
+                return `
+                    <path
+                        class="detail-chart-hover-line"
+                        d="M${prevPoint.x.toFixed(1)},${prevPoint.y.toFixed(1)} L${point.x.toFixed(1)},${point.y.toFixed(1)}"
+                        data-chart-label="${escapeHtml(point.label)}"
+                        data-chart-price="${formatNumber(point.price)}원"
+                    ></path>
+                `;
+            }).join('')}
             ${points.map((point, index) => {
         const step = Math.ceil(points.length / 6);
 
@@ -875,6 +1276,50 @@ function createDetailChartMarkup(histories) {
             <span>${escapeHtml(latest.label)}</span>
         </div>
     `;
+}
+
+// 상세 차트 선 위에 마우스를 올리면 브라우저 기본 title 대신 커스텀 툴팁을 빠르게 표시한다.
+function bindDetailChartTooltip() {
+    const chartBox = document.getElementById('detail-chart-box');
+
+    if (!chartBox) {
+        return;
+    }
+
+    let tooltip = document.getElementById('detail-chart-tooltip');
+
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'detail-chart-tooltip';
+        tooltip.className = 'detail-chart-tooltip';
+        document.body.appendChild(tooltip);
+    }
+
+    chartBox.querySelectorAll('.detail-chart-hover-line').forEach((line) => {
+        line.addEventListener('mouseenter', () => {
+            const label = line.dataset.chartLabel || '-';
+            const price = line.dataset.chartPrice || '-';
+
+            tooltip.innerHTML = `
+                <span>${escapeHtml(label)}</span>
+                <strong>${escapeHtml(price)}</strong>
+            `;
+            tooltip.style.display = 'block';
+        });
+
+        line.addEventListener('mousemove', (event) => {
+            const offset = 14;
+            const maxLeft = window.innerWidth - tooltip.offsetWidth - offset;
+            const maxTop = window.innerHeight - tooltip.offsetHeight - offset;
+
+            tooltip.style.left = `${Math.max(offset, Math.min(event.clientX + offset, maxLeft))}px`;
+            tooltip.style.top = `${Math.max(offset, Math.min(event.clientY + offset, maxTop))}px`;
+        });
+
+        line.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+        });
+    });
 }
 
 // 차트 오른쪽 가격축에 표시할 가격 라벨을 만든다.
@@ -1023,4 +1468,6 @@ window.handleOrderSuccess = async function () {
 
     detailMyStockLoaded = false;
     await loadDetailMyStockTab(true);
+    detailOrderbookLoaded = false;
+    await loadDetailOrderbookTab(true);
 };
