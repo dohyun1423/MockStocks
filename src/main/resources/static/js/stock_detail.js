@@ -317,32 +317,9 @@ async function renderDetailMyStock(symbol) {
 
 // 내 포트폴리오 조회
 async function fetchMyPortfolio() {
-    const authenticated = await waitAuthReady();
+    const response = await authFetch('/api/portfolio');
 
-    if (!authenticated) {
-        return null;
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        redirectToLogin();
-        return null;
-    }
-
-    const response = await fetch('/api/portfolio', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return null;
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -351,33 +328,10 @@ async function fetchMyPortfolio() {
 
 // 현재 종목의 거래내역 조회
 async function fetchMyTrades(symbol) {
-    const authenticated = await waitAuthReady();
-
-    if (!authenticated) {
-        return [];
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        redirectToLogin();
-        return [];
-    }
-
     const query = symbol ? `?symbol=${encodeURIComponent(symbol)}` : '';
-    const response = await fetch(`/api/trades${query}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/trades${query}`);
 
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return [];
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return [];
     }
 
@@ -689,32 +643,13 @@ async function loadDetailOrderbookTab(force = false) {
 
 // 종목코드 기준 호가 API를 호출한다.
 async function fetchStockOrderbook(symbol) {
-    const authenticated = await waitAuthReady();
-
-    if (!authenticated) {
+    if (!symbol) {
         return null;
     }
 
-    const accessToken = localStorage.getItem('accessToken');
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/orderbook`);
 
-    if (!accessToken || !symbol) {
-        redirectToLogin();
-        return null;
-    }
-
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/orderbook`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return null;
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -920,9 +855,8 @@ function bindFavoriteButton() {
 // DB 관심종목 목록을 조회해서 현재 종목의 하트 상태 반영
 async function loadFavoriteStatus(stock) {
     const favoriteButton = document.getElementById('favorite-btn');
-    const accessToken = localStorage.getItem('accessToken');
 
-    if (!favoriteButton || !accessToken || !stock) {
+    if (!favoriteButton || !stock) {
         return;
     }
 
@@ -931,14 +865,9 @@ async function loadFavoriteStatus(stock) {
         .map(normalizeStockName)
         .filter((name) => name.length > 0);
 
-    const response = await fetch('/api/watchlists', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch('/api/watchlists');
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return;
     }
 
@@ -957,49 +886,39 @@ async function loadFavoriteStatus(stock) {
 
 // 관심종목 DB 저장
 async function addWatchlist(stockName) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !stockName) {
+    if (!stockName) {
         return false;
     }
 
-    const response = await fetch('/api/watchlists', {
+    const response = await authFetch('/api/watchlists', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             stockName: stockName
         })
     });
 
-    return response.ok;
+    return !!response && response.ok;
 }
 
 // 관심종목 DB 삭제
 async function removeWatchlist(stockName) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !stockName) {
+    if (!stockName) {
         return false;
     }
 
-    const response = await fetch(`/api/watchlists?stockName=${encodeURIComponent(stockName)}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+    const response = await authFetch(`/api/watchlists?stockName=${encodeURIComponent(stockName)}`, {
+        method: 'DELETE'
     });
 
-    return response.ok;
+    return !!response && response.ok;
 }
 
 // 종목명 또는 종목코드로 DB 상세 정보 조회
 async function fetchStockDetail(keyword) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
+    if (!keyword) {
         return null;
     }
 
@@ -1010,14 +929,9 @@ async function fetchStockDetail(keyword) {
         ? `/api/stocks/symbol/${encodeURIComponent(normalizedKeyword)}`
         : `/api/stocks/detail?name=${encodeURIComponent(normalizedKeyword)}`;
 
-    const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(url);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -1025,20 +939,13 @@ async function fetchStockDetail(keyword) {
 }
 // 종목코드로 현재가 조회
 async function fetchStockQuote(symbol) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
+    if (!symbol) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -1046,33 +953,15 @@ async function fetchStockQuote(symbol) {
 }
 
 async function fetchStockPriceHistories(symbol, period = '1D') {
-    const authenticated = await waitAuthReady();
-
-    if (!authenticated) {
+    if (!symbol) {
         return [];
     }
 
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
-        redirectToLogin();
-        return [];
-    }
-
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
+        cache: 'no-store'
     });
 
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return [];
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return [];
     }
 

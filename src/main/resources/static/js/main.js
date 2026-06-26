@@ -1,9 +1,15 @@
 let selectedWatchlistSymbol = null;
 let draggedWatchlistId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return;
+    }
+
     bindDashboardTabs();
-    loadWatchlists();
+    await loadWatchlists();
 });
 
 // 메인 화면의 관심종목/내 주식 탭 전환
@@ -48,21 +54,15 @@ function openStockFromPortfolio(symbol) {
 
 // 내 관심 종목 리스트 불러오기
 async function loadWatchlists() {
-    const accessToken = localStorage.getItem('accessToken');
     const watchlistPanel = document.querySelector('.watchlist-panel');
 
-    if (!accessToken || !watchlistPanel) {
+    if (!watchlistPanel) {
         return;
     }
 
-    const response = await fetch('/api/watchlists', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch('/api/watchlists');
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return;
     }
 
@@ -186,21 +186,14 @@ function markSelectedWatchlist(watchlistId) {
 }
 
 async function saveWatchlistOrder() {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        return;
-    }
-
     const ids = Array.from(document.querySelectorAll('.watchlist-item'))
         .map((button) => Number(button.dataset.watchlistId))
         .filter((id) => Number.isFinite(id));
 
-    await fetch('/api/watchlists/order', {
+    await authFetch('/api/watchlists/order', {
         method: 'PATCH',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             watchlistIds: ids
@@ -234,20 +227,13 @@ async function selectWatchlistStock(stockName, symbol = null) {
 }
 
 async function fetchStockDetail(stockName) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
+    if (!stockName) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/stocks/detail?name=${encodeURIComponent(stockName)}`);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -256,20 +242,13 @@ async function fetchStockDetail(stockName) {
 
 // 종목코드로 종목 상세 정보 조회
 async function fetchStockDetailBySymbol(symbol) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
+    if (!symbol) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/symbol/${encodeURIComponent(symbol)}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/stocks/symbol/${encodeURIComponent(symbol)}`);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -277,20 +256,13 @@ async function fetchStockDetailBySymbol(symbol) {
 }
 
 async function fetchStockQuote(symbol) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
+    if (!symbol) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -299,21 +271,15 @@ async function fetchStockQuote(symbol) {
 
 // 종목코드와 기간으로 차트용 가격 이력 조회
 async function fetchStockPriceHistories(symbol, period) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
+    if (!symbol) {
         return [];
     }
 
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
-        method: 'GET',
-        cache: 'no-store',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/prices?period=${encodeURIComponent(period)}`, {
+        cache: 'no-store'
     });
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return [];
     }
 
@@ -634,24 +600,21 @@ function bindChartActionButtons() {
 
 // 메인 차트에서 관심종목 추가
 async function addMainWatchlist(stockName) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !stockName) {
+    if (!stockName) {
         return false;
     }
 
-    const response = await fetch('/api/watchlists', {
+    const response = await authFetch('/api/watchlists', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             stockName: stockName
         })
     });
 
-    return response.ok;
+    return !!response && response.ok;
 }
 
 // 차트 기간 버튼 클릭 시 같은 quote 기준으로 상승/하락 색상을 유지한다.

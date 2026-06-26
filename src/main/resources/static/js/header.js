@@ -1,4 +1,5 @@
 let currentUserInfo = null;
+let tokenTimerId = null;
 
 window.authReady = initializeAuth();
 
@@ -7,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     bindStockSearch();
     bindMyInfoModal();
+    bindTokenRefreshButton();
 });
 
 async function initializeAuth() {
@@ -25,7 +27,7 @@ async function initializeAuth() {
             }
         });
 
-        if (response.status === 401) {
+        if (isAuthError(response)) {
             redirectToLogin();
             return false;
         }
@@ -42,6 +44,8 @@ async function initializeAuth() {
         if (userNickname) {
             userNickname.textContent = currentUserInfo.nickname || currentUserInfo.email || 'USER';
         }
+
+        startTokenTimer();
 
         return true;
     } catch (error) {
@@ -64,7 +68,38 @@ function redirectToLogin() {
 }
 
 function isAuthError(response) {
-    return response.status === 401;
+    return response && (response.status === 401 || response.status === 403);
+}
+
+// 보호 API 요청 전에 인증 확인, Authorization 헤더 추가, 인증 실패 처리를 공통으로 수행한다.
+async function authFetch(url, options = {}) {
+    const authenticated = await waitAuthReady();
+
+    if (!authenticated) {
+        return null;
+    }
+
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        redirectToLogin();
+        return null;
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...(options.headers || {}),
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return null;
+    }
+
+    return response;
 }
 
 function bindStockSearch() {
@@ -118,20 +153,9 @@ function bindStockSearch() {
 }
 
 async function searchStocks(keyword) {
-    const accessToken = localStorage.getItem('accessToken');
+    const response = await authFetch(`/api/stocks/search?keyword=${encodeURIComponent(keyword)}`);
 
-    if (!accessToken) {
-        return;
-    }
-
-    const response = await fetch(`/api/stocks/search?keyword=${encodeURIComponent(keyword)}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         clearSearchResults();
         return;
     }
@@ -238,4 +262,88 @@ function escapeHtml(value) {
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
+}
+
+function bindTokenRefreshButton() {
+    const button = document.getElementById('token-refresh-btn');
+
+    if (!button) {
+        return;
+    }
+
+    button.addEventListener('click', refreshAccessTokenManually);
+}
+
+// 사용자가 연장 버튼을 눌렀을 때만 새 JWT를 발급받아 로그인 시간을 60분으로 되돌린다.
+async function refreshAccessTokenManually() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    if (!accessToken) {
+        redirectToLogin();
+        return;
+    }
+
+    const response = await fetch('/api/users/refresh', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+
+    if (isAuthError(response)) {
+        redirectToLogin();
+        return;
+    }
+
+    if (!response.ok) {
+        return;
+    }
+
+    const data = await response.json();
+
+    if (data.token) {
+        localStorage.setItem('accessToken', data.token);
+        startTokenTimer();
+    }
+}
+
+// JWT payload의 exp 값을 읽어 남은 로그인 시간을 계산한다.
+function getTokenRemainingMs(token) {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp * 1000 - Date.now();
+    } catch (error) {
+        return 0;
+    }
+}
+
+function formatRemainingTime(milliseconds) {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+
+    return `${minutes}:${seconds}`;
+}
+
+// 헤더에 JWT 남은 시간을 표시하고 만료되면 로그인 화면으로 이동한다.
+function startTokenTimer() {
+    const remainTime = document.getElementById('token-remain-time');
+
+    if (!remainTime) {
+        return;
+    }
+
+    clearInterval(tokenTimerId);
+
+    tokenTimerId = setInterval(() => {
+        const token = localStorage.getItem('accessToken');
+        const remainingMs = getTokenRemainingMs(token);
+
+        remainTime.textContent = formatRemainingTime(remainingMs);
+
+        if (remainingMs <= 0) {
+            clearInterval(tokenTimerId);
+            redirectToLogin();
+        }
+    }, 1000);
 }

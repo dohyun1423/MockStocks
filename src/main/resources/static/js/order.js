@@ -79,20 +79,13 @@ async function loadOrderData() {
 
 // 현재가 조회
 async function fetchOrderQuote(symbol) {
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken || !symbol) {
+    if (!symbol) {
         return null;
     }
 
-    const response = await fetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
+    const response = await authFetch(`/api/stocks/${encodeURIComponent(symbol)}/quote`);
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -101,26 +94,9 @@ async function fetchOrderQuote(symbol) {
 
 // 내 포트폴리오 조회
 async function fetchOrderPortfolio() {
-    const authenticated = await waitAuthReady();
+    const response = await authFetch('/api/portfolio');
 
-    if (!authenticated) {
-        return null;
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        return null;
-    }
-
-    const response = await fetch('/api/portfolio', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -167,25 +143,22 @@ async function submitOrder() {
 
 // 매수 또는 매도 API 요청
 async function requestOrder(quantity) {
-    const accessToken = localStorage.getItem('accessToken');
     const endpoint = orderState.orderType === 'BUY' ? '/api/orders/buy' : '/api/orders/sell';
 
-    if (!accessToken) {
-        setOrderMessage('로그인이 필요합니다.', 'error');
-        return false;
-    }
-
-    const response = await fetch(endpoint, {
+    const response = await authFetch(endpoint, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({
             symbol: orderState.symbol,
             quantity: quantity
         })
     });
+
+    if (!response) {
+        return false;
+    }
 
     if (!response.ok) {
         const error = await response.json().catch(() => null);

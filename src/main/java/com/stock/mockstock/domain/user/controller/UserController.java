@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import com.stock.mockstock.domain.user.dto.LoginRequest;
 import com.stock.mockstock.domain.user.dto.LoginResponse;
 import org.springframework.security.core.Authentication;
+import com.stock.mockstock.domain.user.dto.TokenRefreshResponse;
+import com.stock.mockstock.global.security.jwt.JwtUtil;
 
 @RestController
 @RequiredArgsConstructor // lombok의 기능
@@ -17,6 +19,7 @@ import org.springframework.security.core.Authentication;
 public class UserController {
 
     private final UserService userService; // lombok의 기능으로 자동 생성자 주입
+    private final JwtUtil jwtUtil;
 
     // 회원가입 요청 처리
     @PostMapping("/signup")
@@ -40,5 +43,13 @@ public class UserController {
     @GetMapping("/me")
     public UserInfoResponse me(Authentication authentication) {
         return userService.getMyInfo(authentication.getName());
+    }
+
+    // 로그인 사용자가 직접 연장 버튼을 눌렀을 때 새 JWT를 발급한다.
+    @PostMapping("/refresh")
+    public TokenRefreshResponse refresh(Authentication authentication) {
+        String token = jwtUtil.generateToken(authentication.getName());
+
+        return new TokenRefreshResponse(token);
     }
 }

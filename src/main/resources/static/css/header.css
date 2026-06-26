@@ -15,7 +15,7 @@
 .top-bar {
     height: 72px;
     display: grid;
-    grid-template-columns: 260px minmax(280px, 1fr) 320px;
+    grid-template-columns: 260px minmax(360px, 1fr) auto;
     align-items: center;
     gap: 24px;
     padding: 0 28px;
@@ -150,7 +150,8 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 10px;
+    min-width: max-content;
 }
 
 .profile-chip {
@@ -363,4 +364,39 @@
     color: var(--muted);
     font-size: 12px;
     line-height: 1.6;
+}
+
+.session-control {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    background: var(--card);
+}
+
+.token-remain-time {
+    min-width: 58px;
+    padding: 0 10px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-align: center;
+}
+
+.token-refresh-btn {
+    height: 100%;
+    padding: 0 12px;
+    border: none;
+    border-left: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.token-refresh-btn:hover {
+    background: rgba(0, 229, 160, 0.08);
+    color: var(--accent);
 }

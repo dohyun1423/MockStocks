@@ -74,32 +74,9 @@ async function loadPortfolioDashboard(force = false) {
 
 // 내 포트폴리오 조회
 async function loadPortfolioData() {
-    const authenticated = await waitAuthReady();
+    const response = await authFetch('/api/portfolio');
 
-    if (!authenticated) {
-        return null;
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        redirectToLogin();
-        return null;
-    }
-
-    const response = await fetch('/api/portfolio', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return null;
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
@@ -108,32 +85,9 @@ async function loadPortfolioData() {
 
 // 내 전체 거래내역 조회
 async function loadTradesData() {
-    const authenticated = await waitAuthReady();
+    const response = await authFetch('/api/trades');
 
-    if (!authenticated) {
-        return null;
-    }
-
-    const accessToken = localStorage.getItem('accessToken');
-
-    if (!accessToken) {
-        redirectToLogin();
-        return null;
-    }
-
-    const response = await fetch('/api/trades', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-
-    if (isAuthError(response)) {
-        redirectToLogin();
-        return null;
-    }
-
-    if (!response.ok) {
+    if (!response || !response.ok) {
         return null;
     }
 
