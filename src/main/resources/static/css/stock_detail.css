@@ -37,14 +37,6 @@ body {
     display: block;
 }
 
-.panel-kicker {
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--accent);
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-}
-
 .stock-summary {
     flex: 0 0 auto;
     display: flex;
@@ -139,21 +131,21 @@ body {
 }
 
 .tab-content {
-    min-height: 820px;
-    margin-top: 16px;
+    min-height: calc(100vh - 260px);
+    margin-top: 14px;
     border: 1px solid var(--border);
     background: rgba(15,25,35,0.45);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .tab-panel {
-    min-height: 820px;
-    height: auto;
     display: none;
-    padding: 22px 24px 120px;
+    height: calc(100vh - 282px);
+    min-height: 560px;
+    padding: 18px;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
 }
 
 .tab-panel.active {
@@ -215,12 +207,28 @@ body {
 
 .detail-chart-box {
     position: relative;
-    min-height: 700px;
-    height: auto;
-    overflow: visible;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+    height: calc(100% - 48px);
+    min-height: 0;
+    overflow: hidden;
 }
 
-/* 상세 차트의 마우스 hover 정보를 즉시 보여주는 커스텀 툴팁이다. */
+.detail-chart-visual {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--border);
+    background: rgba(6, 10, 14, 0.36);
+    overflow: hidden;
+}
+
+.detail-chart-visual .chart-grid {
+    position: absolute;
+    inset: 0;
+}
+
 .detail-chart-tooltip {
     position: fixed;
     z-index: 9999;
@@ -254,12 +262,15 @@ body {
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    align-content: start;
     gap: 10px;
-    margin-bottom: 14px;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
 .detail-chart-stats div {
+    min-height: 70px;
     padding: 12px 14px;
     border: 1px solid var(--border);
     background: rgba(11, 16, 24, 0.82);
@@ -277,6 +288,7 @@ body {
     color: var(--text);
     font-family: var(--font-mono);
     font-size: 13px;
+    line-height: 1.35;
 }
 
 .detail-chart-stats strong.up {
@@ -309,14 +321,6 @@ body {
     vector-effect: non-scaling-stroke;
 }
 
-.detail-chart-point.up {
-    fill: var(--red);
-}
-
-.detail-chart-point.down {
-    fill: #3b82f6;
-}
-
 .detail-chart-guide {
     stroke: rgba(220, 232, 240, 0.08);
     stroke-width: 1;
@@ -333,8 +337,8 @@ body {
     position: relative;
     z-index: 2;
     width: 100%;
-    height: 560px;
-    min-height: 560px;
+    height: calc(100% - 28px);
+    min-height: 0;
 }
 
 .detail-chart-line {
@@ -344,18 +348,13 @@ body {
     vector-effect: non-scaling-stroke;
 }
 
-.detail-chart-point {
-    fill: var(--accent);
-    stroke: var(--bg);
-    stroke-width: 2;
-    vector-effect: non-scaling-stroke;
-}
-
 .detail-chart-axis {
     position: relative;
     z-index: 2;
+    height: 28px;
     display: flex;
     justify-content: space-between;
+    padding: 0 12px 8px;
     color: var(--muted);
     font-family: var(--font-mono);
     font-size: 10px;
@@ -646,7 +645,7 @@ body {
 
 .detail-orderbook-ladder {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 240px;
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 14px;
     position: relative;
     z-index: 2;
@@ -655,20 +654,24 @@ body {
 }
 
 .orderbook-main {
+    display: grid;
+    grid-template-rows: 30px minmax(0, 1fr) 30px;
     min-height: 0;
     border: 1px solid var(--border);
     background: rgba(15, 25, 35, 0.45);
+    overflow: hidden;
 }
 
 .orderbook-side-label {
     display: flex;
+    align-items: center;
     justify-content: center;
-    height: 34px;
-    padding: 8px 12px;
+    height: 30px;
+    padding: 0 10px;
     border-bottom: 1px solid var(--border);
     color: var(--muted);
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
 }
 
@@ -683,14 +686,16 @@ body {
 }
 
 .orderbook-rows {
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
 .orderbook-row {
     display: grid;
-    grid-template-columns: minmax(100px, 1fr) 150px minmax(100px, 1fr);
-    height: 43px;
+    grid-template-columns: minmax(92px, 1fr) 136px minmax(92px, 1fr);
+    flex: 1 1 0;
+    min-height: 29px;
     border-bottom: 1px solid rgba(26, 37, 53, 0.65);
 }
 
@@ -717,13 +722,13 @@ body {
 }
 
 .orderbook-price strong {
-    font-size: 19px;
+    font-size: 16px;
     line-height: 1.05;
 }
 
 .orderbook-price em {
-    margin-top: 2px;
-    font-size: 10px;
+    margin-top: 1px;
+    font-size: 9px;
     font-style: normal;
 }
 
@@ -732,8 +737,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 54px;
-    margin: 0 110px;
+    min-height: 44px;
+    margin: 0 84px;
     border: 1px solid var(--muted);
     background: rgba(6, 10, 14, 0.94);
     font-family: var(--font-mono);
@@ -741,21 +746,21 @@ body {
 
 .orderbook-current-row strong {
     color: var(--red);
-    font-size: 22px;
+    font-size: 18px;
     line-height: 1.05;
 }
 
 .orderbook-current-row span {
-    margin-top: 4px;
+    margin-top: 3px;
     color: var(--red);
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .orderbook-quantity {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 8px;
     overflow: hidden;
     font-family: var(--font-mono);
 }
@@ -770,8 +775,8 @@ body {
 
 .orderbook-quantity span {
     position: absolute;
-    top: 9px;
-    bottom: 9px;
+    top: 7px;
+    bottom: 7px;
     border-radius: 5px;
     opacity: 0.22;
 }
@@ -790,7 +795,7 @@ body {
     position: relative;
     z-index: 1;
     color: var(--text);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .orderbook-info-panel {
@@ -798,6 +803,7 @@ body {
     border: 1px solid var(--border);
     background: var(--card);
     padding: 12px;
+    overflow: auto;
 }
 
 .orderbook-info-panel dl {
@@ -838,9 +844,33 @@ body {
 }
 
 @media (max-width: 1100px) {
+    .tab-content {
+        min-height: auto;
+        overflow: visible;
+    }
+
+    .tab-panel {
+        height: auto;
+        min-height: 560px;
+        overflow: visible;
+    }
+
+    .detail-chart-box,
     .detail-orderbook-ladder {
         grid-template-columns: 1fr;
         height: auto;
+    }
+
+    .detail-chart-visual {
+        min-height: 420px;
+    }
+
+    .detail-price-chart {
+        height: 390px;
+    }
+
+    .detail-chart-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .detail-orderbook-wrap {
@@ -850,9 +880,7 @@ body {
     .orderbook-current-row {
         margin: 0;
     }
-}
 
-@media (max-width: 1100px) {
     .detail-info-cards,
     .detail-info-list,
     .detail-my-cards {
@@ -893,15 +921,6 @@ body {
     }
 
     .detail-chart-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .detail-chart-box {
-        min-height: 540px;
-    }
-
-    .detail-price-chart {
-        height: 420px;
-        min-height: 420px;
+        grid-template-columns: 1fr;
     }
 }

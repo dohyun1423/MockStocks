@@ -317,7 +317,6 @@ function renderMainChart(stockName, priceHistories = [], symbol = null, activePe
         <div class="panel-header chart-main-header">
             <div class="chart-title-row">
                 <div>
-                    <p class="panel-kicker">// SELECTED STOCK</p>
                     <h1>${escapeHtml(stockName)}</h1>
                 </div>
 
@@ -635,52 +634,6 @@ function bindChartPeriodButtons(stockName, symbol, quote = null) {
     });
 }
 
-// 가격 이력을 SVG 좌표로 변환
-function createChartPoints(priceHistories) {
-    if (!priceHistories || priceHistories.length === 0) {
-        return [];
-    }
-
-    const width = 900;
-    const height = 420;
-    const padding = 36;
-    const prices = priceHistories.map((item) => Number(item.closePrice));
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1;
-
-    return priceHistories.map((item, index) => {
-        const price = Number(item.closePrice);
-        const x = padding + index * ((width - padding * 2) / Math.max(priceHistories.length - 1, 1));
-        const y = height - padding - ((price - minPrice) / priceRange) * (height - padding * 2);
-
-        return { x, y };
-    });
-}
-
-// SVG 선 차트 path 생성
-function createLinePath(points) {
-    return points
-        .map((point, index) => {
-            const command = index === 0 ? 'M' : 'L';
-            return `${command}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
-        })
-        .join(' ');
-}
-
-// SVG 영역 차트 path 생성
-function createAreaPath(points) {
-    if (points.length === 0) {
-        return '';
-    }
-
-    const linePath = createLinePath(points);
-    const firstPoint = points[0];
-    const lastPoint = points[points.length - 1];
-
-    return `${linePath} L${lastPoint.x.toFixed(1)},420 L${firstPoint.x.toFixed(1)},420 Z`;
-}
-
 function renderStockSideInfo(stockName, stock, quote) {
     const sidePanel = document.querySelector('.side-panel');
 
@@ -692,7 +645,6 @@ function renderStockSideInfo(stockName, stock, quote) {
         sidePanel.innerHTML = `
             <div class="panel-header">
                 <div>
-                    <p class="panel-kicker">// STOCK INFO</p>
                     <h2>${escapeHtml(stockName || 'DETAILS')}</h2>
                 </div>
             </div>
@@ -710,7 +662,6 @@ function renderStockSideInfo(stockName, stock, quote) {
     sidePanel.innerHTML = `
         <div class="panel-header">
             <div>
-                <p class="panel-kicker">// STOCK INFO</p>
                 <h2>${escapeHtml(stock.name)}</h2>
             </div>
         </div>

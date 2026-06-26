@@ -4,7 +4,10 @@ let orderState = {
     orderType: 'BUY',
     currentPrice: 0,
     cashBalance: 0,
-    holdingQuantity: 0
+    holdingQuantity: 0,
+    marketSession: null,
+    immediateExecution: false,
+    reservationAvailable: false
 };
 
 // 주문 모달 열기
@@ -61,13 +64,17 @@ function setOrderType(orderType) {
 
 // 주문에 필요한 현재가, 현금, 보유수량 조회
 async function loadOrderData() {
-    const [quote, portfolio] = await Promise.all([
+    const [quote, portfolio, session] = await Promise.all([
         fetchOrderQuote(orderState.symbol),
-        fetchOrderPortfolio()
+        fetchOrderPortfolio(),
+        fetchOrderSession()
     ]);
 
     orderState.currentPrice = Number(quote?.currentPrice || 0);
     orderState.cashBalance = Number(portfolio?.cashBalance || 0);
+    orderState.marketSession = session?.marketSession || null;
+    orderState.immediateExecution = !!session?.immediateExecution;
+    orderState.reservationAvailable = !!session?.reservationAvailable;
 
     const holding = portfolio?.holdings?.find((item) => item.symbol === orderState.symbol);
     orderState.holdingQuantity = Number(holding?.quantity || 0);
@@ -75,6 +82,19 @@ async function loadOrderData() {
     setOrderText('order-current-price', `${formatOrderNumber(orderState.currentPrice)}원`);
     setOrderText('order-cash-balance', `${formatOrderNumber(orderState.cashBalance)}원`);
     setOrderText('order-holding-quantity', `${formatOrderNumber(orderState.holdingQuantity)}주`);
+    setOrderText('order-market-session', session?.displayName || '-');
+    setOrderText('order-market-session-message', session?.message || '-');
+}
+
+// 주문 세션 조회
+async function fetchOrderSession() {
+    const response = await authFetch('/api/orders/session');
+
+    if (!response || !response.ok) {
+        return null;
+    }
+
+    return await response.json();
 }
 
 // 현재가 조회
@@ -122,13 +142,13 @@ async function submitOrder() {
         return;
     }
 
-    const success = await requestOrder(quantity);
+    const result = await requestOrder(quantity);
 
-    if (!success) {
+    if (!result) {
         return;
     }
 
-    setOrderMessage('주문이 완료되었습니다.', 'success');
+    setOrderMessage(result.message || '주문이 완료되었습니다.', 'success');
     await loadOrderData();
     updateOrderTotalAmount();
 
@@ -152,21 +172,22 @@ async function requestOrder(quantity) {
         },
         body: JSON.stringify({
             symbol: orderState.symbol,
-            quantity: quantity
+            quantity: quantity,
+            limitPrice: orderState.currentPrice
         })
     });
 
     if (!response) {
-        return false;
+        return null;
     }
 
     if (!response.ok) {
         const error = await response.json().catch(() => null);
         setOrderMessage(error?.message || '주문 처리에 실패했습니다.', 'error');
-        return false;
+        return null;
     }
 
-    return true;
+    return await response.json();
 }
 
 // 수량 변경 시 예상 주문금액 갱신

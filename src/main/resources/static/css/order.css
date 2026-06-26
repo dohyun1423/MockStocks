@@ -173,3 +173,24 @@
     background: #60a5fa;
     color: #000;
 }
+
+.order-session-card {
+     margin-bottom: 14px;
+     padding: 12px;
+     border: 1px solid var(--border);
+     background: rgba(15, 25, 35, 0.72);
+ }
+
+.order-session-card strong {
+    display: block;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.order-session-card p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+}

@@ -133,17 +133,13 @@ function connectDetailRealtimeSocket(symbol) {
     detailRealtimeSocket.onmessage = (event) => {
         const message = JSON.parse(event.data);
 
-        console.log('DETAIL REALTIME RAW:', message);
-
         handleDetailRealtimeMessage(message);
     };
 
-    detailRealtimeSocket.onclose = (event) => {
-        console.log('DETAIL REALTIME CLOSED:', event.code, event.reason);
+    detailRealtimeSocket.onclose = () => {
     };
 
-    detailRealtimeSocket.onerror = (event) => {
-        console.log('DETAIL REALTIME ERROR:', event);
+    detailRealtimeSocket.onerror = () => {
     };
 }
 
@@ -154,7 +150,6 @@ function handleDetailRealtimeMessage(message) {
     }
 
     if (message.type === 'SUBSCRIBED') {
-        console.log('DETAIL REALTIME SUBSCRIBED:', message.symbol);
         return;
     }
 
@@ -1037,7 +1032,6 @@ function createDetailChartMarkup(histories) {
     const isUp = change >= 0;
 
     const chartClass = isUp ? 'up' : 'down';
-    // 상세 차트의 실제 선 색상을 JS에서 직접 지정해 CSS 충돌 가능성을 제거한다.
     const chartColor = chartClass === 'down' ? '#3b82f6' : '#ff4560';
 
     const points = histories.map((item, index) => {
@@ -1058,9 +1052,6 @@ function createDetailChartMarkup(histories) {
         return `${command}${point.x.toFixed(1)},${point.y.toFixed(1)}`;
     }).join(' ');
 
-    const firstPoint = points[0];
-    const lastPoint = points[points.length - 1];
-
     const highPrice = Math.max(...histories.map((item) => Number(item.highPrice || item.closePrice || 0)));
     const lowPrice = Math.min(...histories.map((item) => Number(item.lowPrice || item.closePrice || 0)));
     const openPrice = Number(first.openPrice || first.closePrice || 0);
@@ -1075,7 +1066,51 @@ function createDetailChartMarkup(histories) {
     });
 
     return `
-        <div class="chart-grid"></div>
+        <div class="detail-chart-visual">
+            <div class="chart-grid"></div>
+
+            <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                ${yLabels.map((label) => `
+                    <line
+                        class="detail-chart-guide"
+                        x1="${paddingLeft}"
+                        y1="${label.y.toFixed(1)}"
+                        x2="${width - paddingRight}"
+                        y2="${label.y.toFixed(1)}"
+                    ></line>
+                    <text
+                        class="detail-chart-price-label"
+                        x="${width - paddingRight + 12}"
+                        y="${label.y.toFixed(1)}"
+                        dominant-baseline="middle"
+                    >${formatNumber(Math.round(label.price))}</text>
+                `).join('')}
+
+                <path
+                    class="detail-chart-line ${chartClass}"
+                    d="${linePath}"
+                    style="stroke: ${chartColor};"
+                ></path>
+
+                ${points.slice(1).map((point, index) => {
+                    const prevPoint = points[index];
+
+                    return `
+                        <path
+                            class="detail-chart-hover-line"
+                            d="M${prevPoint.x.toFixed(1)},${prevPoint.y.toFixed(1)} L${point.x.toFixed(1)},${point.y.toFixed(1)}"
+                            data-chart-label="${escapeHtml(point.label)}"
+                            data-chart-price="${formatNumber(point.price)}원"
+                        ></path>
+                    `;
+                }).join('')}
+            </svg>
+
+            <div class="detail-chart-axis">
+                <span>${escapeHtml(first.label)}</span>
+                <span>${escapeHtml(latest.label)}</span>
+            </div>
+        </div>
 
         <div class="detail-chart-stats">
             <div>
@@ -1103,71 +1138,9 @@ function createDetailChartMarkup(histories) {
                 <strong>${formatNumber(latest.volume)}</strong>
             </div>
         </div>
-
-        <svg class="detail-price-chart" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-
-            ${yLabels.map((label) => `
-                <line
-                    class="detail-chart-guide"
-                    x1="${paddingLeft}"
-                    y1="${label.y.toFixed(1)}"
-                    x2="${width - paddingRight}"
-                    y2="${label.y.toFixed(1)}"
-                ></line>
-                <text
-                    class="detail-chart-price-label"
-                    x="${width - paddingRight + 12}"
-                    y="${label.y.toFixed(1)}"
-                    dominant-baseline="middle"
-                >${formatNumber(Math.round(label.price))}</text>
-            `).join('')}      
-
-            <path
-                class="detail-chart-line ${chartClass}"
-                d="${linePath}"
-                style="stroke: ${chartColor};"
-            ></path>
-            ${points.slice(1).map((point, index) => {
-                const prevPoint = points[index];
-        
-                return `
-                    <path
-                        class="detail-chart-hover-line"
-                        d="M${prevPoint.x.toFixed(1)},${prevPoint.y.toFixed(1)} L${point.x.toFixed(1)},${point.y.toFixed(1)}"
-                        data-chart-label="${escapeHtml(point.label)}"
-                        data-chart-price="${formatNumber(point.price)}원"
-                    ></path>
-                `;
-            }).join('')}
-            ${points.map((point, index) => {
-        const step = Math.ceil(points.length / 6);
-
-        if (index !== 0 && index !== points.length - 1 && index % step !== 0) {
-            return '';
-        }
-
-        return `
-                    <circle
-                        class="detail-chart-point ${chartClass}"
-                        cx="${point.x.toFixed(1)}"
-                        cy="${point.y.toFixed(1)}"
-                        r="3"
-                        style="fill: ${chartColor};"
-                    >
-                        <title>${escapeHtml(point.label)} / ${formatNumber(point.price)}원</title>
-                    </circle>
-                `;
-    }).join('')}
-        </svg>
-
-        <div class="detail-chart-axis">
-            <span>${escapeHtml(first.label)}</span>
-            <span>${escapeHtml(latest.label)}</span>
-        </div>
     `;
 }
 
-// 상세 차트 선 위에 마우스를 올리면 브라우저 기본 title 대신 커스텀 툴팁을 빠르게 표시한다.
 function bindDetailChartTooltip() {
     const chartBox = document.getElementById('detail-chart-box');
 

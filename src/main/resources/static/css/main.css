@@ -84,25 +84,12 @@ body {
     margin-bottom: 16px;
 }
 
-.watchlist-panel .panel-kicker {
-    font-size: 9px;
-    letter-spacing: 2px;
-}
-
 .watchlist-panel .panel-header h2 {
     font-size: 24px;
 }
 
 .panel-header {
     margin-bottom: 22px;
-}
-
-.panel-kicker {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    color: var(--accent);
-    letter-spacing: 3px;
-    margin-bottom: 8px;
 }
 
 .panel-header h1,

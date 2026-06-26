@@ -52,14 +52,6 @@ body {
     margin-bottom: 24px;
 }
 
-.panel-kicker {
-    margin-bottom: 8px;
-    color: var(--accent);
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 3px;
-}
-
 .portfolio-header h1,
 .section-header h2 {
     font-family: var(--font-display);

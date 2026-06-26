@@ -1,4 +1,3 @@
-// 매수와 매도 주문 요청 값을 담는 DTO
 package com.stock.mockstock.domain.order.dto;
 
 import jakarta.validation.constraints.NotBlank;
@@ -15,4 +14,7 @@ public class OrderRequest {
     @NotNull(message = "수량은 필수입니다.")
     @Positive(message = "수량은 1주 이상이어야 합니다.")
     private Integer quantity;
+
+    // 예약 주문 또는 시간외 주문에서 사용할 기준 가격
+    private Long limitPrice;
 }

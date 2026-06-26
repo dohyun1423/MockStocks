@@ -1,13 +1,12 @@
-// 현재가 기준 즉시 매수와 매도 처리를 담당하는 서비스
 package com.stock.mockstock.domain.order.service;
 
 import com.stock.mockstock.domain.order.dto.OrderRequest;
 import com.stock.mockstock.domain.order.dto.OrderResponse;
-import com.stock.mockstock.domain.order.entity.Trade;
+import com.stock.mockstock.domain.order.entity.PendingOrder;
+import com.stock.mockstock.domain.order.enumtype.MarketSession;
 import com.stock.mockstock.domain.order.enumtype.OrderType;
-import com.stock.mockstock.domain.order.repository.TradeRepository;
-import com.stock.mockstock.domain.portfolio.entity.Holding;
-import com.stock.mockstock.domain.portfolio.repository.HoldingRepository;
+import com.stock.mockstock.domain.order.enumtype.PendingOrderStatus;
+import com.stock.mockstock.domain.order.repository.PendingOrderRepository;
 import com.stock.mockstock.domain.stock.dto.StockQuoteResponse;
 import com.stock.mockstock.domain.stock.entity.Stock;
 import com.stock.mockstock.domain.stock.repository.StockRepository;
@@ -25,80 +24,113 @@ public class OrderService {
 
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
-    private final HoldingRepository holdingRepository;
-    private final TradeRepository tradeRepository;
+    private final PendingOrderRepository pendingOrderRepository;
     private final StockQuoteService stockQuoteService;
+    private final MarketSessionService marketSessionService;
+    private final OrderExecutionService orderExecutionService;
 
-    // 현재가 기준 즉시 매수 처리
     public OrderResponse buy(String email, OrderRequest request) {
-        validateOrderRequest(request);
-
-        User user = getUser(email);
-        Stock stock = getStockBySymbol(request.getSymbol());
-        int quantity = request.getQuantity();
-        Long price = getCurrentPrice(stock);
-        Long totalAmount = calculateTotalAmount(price, quantity);
-
-        validateBuyAmount(user, totalAmount);
-        user.decreaseCash(totalAmount);
-
-        Holding holding = holdingRepository.findByUserAndStock(user, stock)
-                .orElseGet(() -> Holding.builder()
-                        .user(user)
-                        .stock(stock)
-                        .quantity(0)
-                        .averagePrice(0L)
-                        .build());
-
-        holding.buy(quantity, price);
-        holdingRepository.save(holding);
-
-        saveTrade(user, stock, OrderType.BUY, quantity, price, totalAmount);
-
-        return new OrderResponse(
-                stock.getName(),
-                OrderType.BUY,
-                quantity,
-                price,
-                totalAmount,
-                user.getCash()
-        );
+        return placeOrder(email, request, OrderType.BUY);
     }
 
-    // 현재가 기준 즉시 매도 처리
     public OrderResponse sell(String email, OrderRequest request) {
+        return placeOrder(email, request, OrderType.SELL);
+    }
+
+    private OrderResponse placeOrder(
+            String email,
+            OrderRequest request,
+            OrderType orderType
+    ) {
         validateOrderRequest(request);
 
         User user = getUser(email);
         Stock stock = getStockBySymbol(request.getSymbol());
-        int quantity = request.getQuantity();
-        Long price = getCurrentPrice(stock);
-        Long totalAmount = calculateTotalAmount(price, quantity);
+        MarketSession session = marketSessionService.getCurrentSession();
 
-        Holding holding = holdingRepository.findByUserAndStock(user, stock)
-                .orElseThrow(() -> new IllegalArgumentException("보유 중인 종목이 아닙니다."));
-
-        validateSellQuantity(holding, quantity);
-        holding.sell(quantity);
-
-        if (holding.isEmpty()) {
-            holdingRepository.delete(holding);
+        if (!marketSessionService.isOrderAvailable(session)) {
+            throw new IllegalArgumentException("현재는 주문할 수 없는 시간입니다.");
         }
 
-        user.increaseCash(totalAmount);
-        saveTrade(user, stock, OrderType.SELL, quantity, price, totalAmount);
+        Long currentPrice = getCurrentPrice(stock);
+        Long orderPrice = resolveOrderPrice(request, currentPrice);
+        Long totalAmount = orderExecutionService.calculateTotalAmount(orderPrice, request.getQuantity());
+
+        if (marketSessionService.isImmediateExecution(session)) {
+            orderExecutionService.execute(
+                    user,
+                    stock,
+                    orderType,
+                    request.getQuantity(),
+                    orderPrice
+            );
+
+            return new OrderResponse(
+                    stock.getName(),
+                    orderType,
+                    request.getQuantity(),
+                    orderPrice,
+                    totalAmount,
+                    user.getCash(),
+                    "EXECUTED",
+                    session,
+                    null,
+                    "주문이 체결되었습니다."
+            );
+        }
+
+        PendingOrder pendingOrder = savePendingOrder(
+                user,
+                stock,
+                orderType,
+                request.getQuantity(),
+                orderPrice,
+                session
+        );
 
         return new OrderResponse(
                 stock.getName(),
-                OrderType.SELL,
-                quantity,
-                price,
+                orderType,
+                request.getQuantity(),
+                orderPrice,
                 totalAmount,
-                user.getCash()
+                user.getCash(),
+                "RESERVED",
+                session,
+                pendingOrder.getId(),
+                "현재 거래 세션에서는 예약 주문으로 접수되었습니다."
         );
     }
 
-    // 주문 요청의 필수값과 수량을 서비스 계층에서 한 번 더 검증
+    private PendingOrder savePendingOrder(
+            User user,
+            Stock stock,
+            OrderType orderType,
+            Integer quantity,
+            Long limitPrice,
+            MarketSession session
+    ) {
+        PendingOrder pendingOrder = PendingOrder.builder()
+                .user(user)
+                .stock(stock)
+                .orderType(orderType)
+                .quantity(quantity)
+                .limitPrice(limitPrice)
+                .marketSession(session)
+                .status(PendingOrderStatus.PENDING)
+                .build();
+
+        return pendingOrderRepository.save(pendingOrder);
+    }
+
+    private Long resolveOrderPrice(OrderRequest request, Long currentPrice) {
+        if (request.getLimitPrice() != null && request.getLimitPrice() > 0) {
+            return request.getLimitPrice();
+        }
+
+        return currentPrice;
+    }
+
     private void validateOrderRequest(OrderRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("주문 요청이 비어 있습니다.");
@@ -111,46 +143,10 @@ public class OrderService {
         if (request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new IllegalArgumentException("수량은 1주 이상이어야 합니다.");
         }
-    }
 
-    private void validateBuyAmount(User user, Long totalAmount) {
-        if (user.getCash() < totalAmount) {
-            throw new IllegalArgumentException("보유 현금이 부족합니다.");
+        if (request.getLimitPrice() != null && request.getLimitPrice() <= 0) {
+            throw new IllegalArgumentException("주문 가격은 0보다 커야 합니다.");
         }
-    }
-
-    private void validateSellQuantity(Holding holding, Integer quantity) {
-        if (holding.getQuantity() < quantity) {
-            throw new IllegalArgumentException("보유 수량이 부족합니다.");
-        }
-    }
-
-    private Long calculateTotalAmount(Long price, Integer quantity) {
-        try {
-            return Math.multiplyExact(price, quantity.longValue());
-        } catch (ArithmeticException e) {
-            throw new IllegalArgumentException("주문 금액이 너무 큽니다.");
-        }
-    }
-
-    private void saveTrade(
-            User user,
-            Stock stock,
-            OrderType orderType,
-            Integer quantity,
-            Long price,
-            Long totalAmount
-    ) {
-        Trade trade = Trade.builder()
-                .user(user)
-                .stock(stock)
-                .orderType(orderType)
-                .quantity(quantity)
-                .price(price)
-                .totalAmount(totalAmount)
-                .build();
-
-        tradeRepository.save(trade);
     }
 
     private User getUser(String email) {
@@ -158,7 +154,6 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
     }
 
-    // 종목코드를 정규화해서 주문 대상 종목을 조회
     private Stock getStockBySymbol(String symbol) {
         String normalizedSymbol = normalizeSymbol(symbol);
 
